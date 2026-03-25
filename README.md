@@ -40,7 +40,7 @@ https://www.tomentella.de/
 
 For further explantion see here or in the releases:
 
-[Documentation](docs\documentation.md)
+[Documentation](docs/documentation.md)
 
 
 
