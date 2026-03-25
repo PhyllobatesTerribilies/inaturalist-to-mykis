@@ -23,7 +23,8 @@ if exist venv\Scripts\activate.bat (
 REM === Dependencies ===
 echo.
 echo [2/4] Installiere Dependencies...
-python -m pip install --quiet --upgrade pip pyinstaller pandas openpyxl geopandas pyogrio
+python -m pip install --quiet --upgrade
+python -m pip install -r requirements.txt
 
 REM === Cleanup ===
 echo.
@@ -42,7 +43,7 @@ echo [4/4] Baue EXE...
 echo.
 
 pyinstaller ^
-    --name=inat-to-mykis-gui ^
+    --name=inaturalist-to-mykis ^
     --onedir ^
     --noconsole ^
 	--add-data "assets;assets" ^
@@ -71,8 +72,8 @@ echo ================================================
 echo FERTIG!
 echo ================================================
 echo.
-echo EXE: dist\inat-to-mykis-gui.exe
-dir dist\inat-to-mykis-gui.exe | find "inat"
+echo EXE: dist\inaturalist-to-mykis\inaturalist-to-mykis.exe 
+dir "dist\inaturalist-to-mykis\inaturalist-to-mykis.exe" | find "inaturalist"
 echo.
 echo WICHTIG: src/ ist automatisch als Package eingebunden!
 echo.

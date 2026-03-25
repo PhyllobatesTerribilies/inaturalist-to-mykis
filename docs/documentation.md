@@ -1,13 +1,24 @@
-# Betriebsanleitung – inat-to-mykis
+# Dokumentation – inaturalist-to-mykis
 
-**Version:** 0.3.0  
-**Datum:** 2026-02-16
+**Version:** 0.7.0  
+**Datum:** 2026-03-15
 
 ---
 
 ## 1. Einleitung
 
-Das Programm **inat-to-mykis** konvertiert Pilzbeobachtungen aus **iNaturalist** in ein Format, das in **MykIS** (Mykologisches Informationssystem) importiert werden kann. 
+Das Programm inaturalist-to-mykis konvertiert Pilzbeobachtungen aus iNaturalist in ein Format, das in MykIS importiert werden kann. 
+
+
+Das Programm kovertiert eine exportierte iNaturalist Datei bzw. vordefinierte Spalten in eine kompatibles Mykis Dateiformat.
+Mykis Referenz Dateiformat: mykdaten.xls (siehe 2026-02-07_layout_mykdaten.xls [mykdaten]([inaturalist-to-mykis/assets at master · PhyllobatesTerribilies/inaturalist-to-mykis](https://github.com/PhyllobatesTerribilies/inaturalist-to-mykis/tree/master/assets))
+
+
+
+
+Es gibt die Option eine Datei zu erstellen bei der Konvertierung oder die Daten auf eine bestehende Datei anzuhängen. Die bestehende Datei muss eine Datei mit den selben Spalten wie die mykdaten.xls sein, ansonsten werden neue Spalten hinzugefügt.
+
+Desweiteren gibt es einen Funktion die neunen Fundorte zu bestehende fundorte zuzuordnen. Dabei muss im Programm einen Fundort Datei angehängt werden.
 
 ### Unterstützte Formate:
 
@@ -16,14 +27,12 @@ Das Programm **inat-to-mykis** konvertiert Pilzbeobachtungen aus **iNaturalist**
 
 ---
 
-## 2. Installation & Start
+## 2. Start
 
 ### 2.1 Programmstart
 
-**Option 1: Ausführbare Datei (empfohlen)**
-
 ```
-Doppelklick auf: inat-to-mykis.exe
+Doppelklick auf: inaturalist-to-mykis.exe
 ```
 
 ### 2.2 Hauptfenster
@@ -131,7 +140,7 @@ INFO: Tabelle eingelesen
 
 ### 3.3 Spalten-Kompatibilitätsprüfung
 
-Beim Anhängen prüft das Programm automatisch die Spaltenübereinstimmung. Es ist eine Referenz mykdaten.xls hinterlegt, mit der die bestehende Datei beim Anhängen überprüft wird ob alle Spalten vorhanden sind.
+Beim Konvertieren prüft das Programm automatisch die Spaltenübereinstimmung. Es ist eine Referenz mykdaten.xls hinterlegt, mit der die bestehende Datei beim Anhängen überprüft wird ob alle Spalten vorhanden sind.
 
 **Szenario: Spalten stimmen NICHT überein**
 
@@ -190,9 +199,7 @@ Beim Anhängen prüft das Programm automatisch die Spaltenübereinstimmung. Es i
 
 Das Programm nutzt die iNaturlist Felder  `place_country_name`, `place_state_name`,sowie `place_guess`.
 
-Wenn die Felder `place_country_name`, `place_state_name` nicht verfürgbar sind bzw. nicht mit exportiert werden, wird stattdessen das Feld `place_guess`
-
-strukturierte iNaturalist-Felder mit automatischem Fallback auf `place_guess`
+Wenn die Felder `place_country_name`, `place_state_name` nicht verfürgbar sind bzw. nicht mit exportiert werden, wird stattdessen das Feld `place_guess` verwendet
 
 #### Land (name_staat)
 
@@ -263,25 +270,28 @@ Diese Spalten werden aus iNaturalist Custom Fields übernommen:
 ### 4.4 iNaturalist Daten Filterung
 
 Die Daten von iNaturalist werden bei der Konvertierung gefiltert und aussortiert.
-Wenn das Feld "field:mykis-erfassung" in der Datei vorhanden wird, jede Zeile dieser Spalte ob die Wörter 
+Wenn das Feld "field:mykis-erfassung" in der Datei vorhanden ist,  wird jede Zeile dieser Spalte auf diese Wörter überprüft.
 
-| yes |
-| --- |
-| ja  |
-|     |
-|     |
-|     |
 
-## 
+
+
+
+| Wörter |
+| ------ |
+| yes    |
+| ja     |
+|        |
+
+
+
+ 
 
 ## 4.5 Fundort Zurodnung
 
 Die Fundort Zurodnung ist nur aktiv, solange eine Datei als Fundort Zuodrnungs Liste hinterlegt ist.
 
-
 Wenn ein Fundort im gleichen 16tel Quadranten liegt, wie ein bestehendert Fundort in der Fundort Zurodnungs Liste, dann werden diese Daten auf den Neunen übertragen.
 Wenn es mehrere bestehende Fundort in der Fundort Zuordnungs Liste vorhanden sind, werden die Daten des Nähesten auf den neuen Fundort übertragen.
-
 
 Folgende Daten werden übertrage:
 
@@ -302,8 +312,6 @@ Folgende Daten werden übertrage:
 - ozeanitaet
 
 - zonalitaet
-
-
 
 Die originalen Geokoordianten des neuen Fundortes werden gelöscht
 
