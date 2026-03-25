@@ -34,17 +34,18 @@ https://www.tomentella.de/
 - data classification
 - data conversion log
 
+
+
+## Documentation
+
+For further explantion see here or in the releases:
+
+[Documentation](docs\documentation.md)
+
+
+
 ## Download
 
 To use  the program just download it here:
 
 [Releases · PhyllobatesTerribilies/inaturalist-to-mykis](https://github.com/PhyllobatesTerribilies/inaturalist-to-mykis/releases)
-
-
-
-
-
-
-### Lizenz
-
-MIT (oder passend zu deinem Projekt)
