@@ -45,7 +45,6 @@ pyinstaller ^
     --name=inat-to-mykis-gui ^
     --onedir ^
     --noconsole ^
-    --add-data "layout;layout" ^
 	--add-data "assets;assets" ^
 	--icon=assets/app.ico ^
     %ICON_SWITCH% ^
