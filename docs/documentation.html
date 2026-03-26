@@ -1249,7 +1249,7 @@ pre[class*="language-"] {
 </head>
 <body>
   <article class="markdown-body"><h1 class="atx" id="dokumentation--inaturalist-to-mykis">Dokumentation – inaturalist-to-mykis</h1>
-<p><strong>Version:</strong> 0.7.0<br><strong>Datum:</strong> 2026-03-15</p>
+<p><strong>Version:</strong> 0.8.0<br><strong>Datum:</strong> 2026-03-26</p>
 <hr>
 <h2 class="atx" id="1-einleitung">1. Einleitung</h2>
 <p>Das Programm inaturalist-to-mykis konvertiert Pilzbeobachtungen von iNaturalist in ein Format, das direkt in MykIS importiert werden kann. Dabei werden vordefinierte Spalten einer exportierten iNaturalist-Datei in das kompatible MykIS-Dateiformat überführt.</p>
@@ -1612,8 +1612,42 @@ Wenn es mehrere bestehende Fundort in der Fundort Zuordnungs Liste vorhanden sin
 <li>zonalitaet</li>
 </ul>
 <p>Die originalen Geokoordianten des neuen Fundortes werden auch gelöscht.</p>
-<h2 class="atx" id="5-best-practices">5. Best Practices</h2>
-<h3 class="atx" id="51-vorbereitung-in-inaturalist-expot">5.1 Vorbereitung in iNaturalist Expot</h3>
+<h2 class="atx" id="5-log">5. Log</h2>
+<p>Das Programm erzeugt bei jeder Konvertierung ein Log Datei mit einem Datum, diese kann verwendet werden um noch genauere Details über die Fundortzurodnung zu bekommen.
+Es wird Details über die Referenz Fundort Datei ausgegeben wie z.b: Anzahl an Refernz Datensätze oder auch die "mtb" Spalte gefunden wurde oder auch wie viele verschiede 16tel Quadranten es gibt. 
+Es wird in der Datei auch jede Fundortzuordnung aufgelistet.</p>
+<p>z.b: Fundort-Zuordnung:[0] --&gt; Das bedeutet der Index 0 in der iNaturalist Datei wurde wie angegeben verwändert.
+'BASIS_ortslage: 'iNaturalist' → 'OT Hasseldieksdamm Hofholz'
+Das heißt die BASIS_ortslage wurde auf OT Hasseldieksdamm Hofholz geändert.</p>
+<p>Bei jeder Konvertierung erstellt das Programm automatisch eine Log-Datei mit Zeitstempel. Diese Datei dient der Qualitätssicherung und liefert detaillierte Informationen darüber, wie die Fundortdaten verarbeitet und zugeordnet wurden.</p>
+<h3 class="atx" id="inhalte-der-log-datei">Inhalte der Log-Datei</h3>
+<p>Das Protokoll gibt Aufschluss über folgende Punkte:</p>
+<ul>
+<li>Anzahl der geladenen Referenz-Datensätze.</li>
+<li>Bestätigung, ob die benötigte MTB-Spalte (Messtischblatt) gefunden wurde.</li>
+<li>Statistiken über die geografische Abdeckung (z. B. Anzahl der verschiedenen 16tel-Quadranten).</li>
+<li>Status der geladenen Shapefiles für die geografische Validierung.</li>
+<li>Detaillierte Fundort-Zuordnung</li>
+</ul>
+<h4 class="atx" id="detaillierte-fundort-zuordnung">Detaillierte Fundort-Zuordnung</h4>
+<p>Ein Eintrag wie <code>Fundort-Zuordnung:[0]</code> bedeutet, dass der Datensatz mit dem Index 0 (Der Index muss immer +2 gerechnet werden für die exakte Excel Zeile) aus der iNaturalist-Quelldatei verarbeitet wurde. Die Pfeile (<code>→</code>) zeigen dabei die Transformation der Daten an:</p>
+<blockquote>
+<p><strong>Beispiel:</strong> <code>BASIS_ortslage: 'iNaturalist' → 'OT Hasseldieksdamm Hofholz'</code><br>Hier wurde der Name <code>iNaturalist</code> durch die Ortsbezeichnung aus der Referenzdatei ersetzt.</p>
+</blockquote>
+<p><strong>Beispiel Log</strong></p>
+<pre><code class="fenced-code-block">Start inat to mykis convertation
+Info: Referenzdatei ausgewählt C:\workspace\INaturlist_Mykis_Konvertierung\Testdaten\MTB\fundorte_sh.xlsx
+Info: Referenzdatei geladen: 5808 Spalten
+Info: MTB-Spalte gefunden als 'mtb'
+Lade Shapefile: C:\workspace\INaturlist_Mykis_Konvertierung _github\dist\inaturalist-to-mykis\_internal\assets\b25_utm32s\b25_utm32s.shp
+Shapefile geladen: 2980 MTB-Blätter
+Referenz Datei Einträge: 5808
+Referenz Datei verschiedene 16tel Quadranten: 1778
+Fundort-Zuordnung:[0] --&gt; 1626,342 ' → ' 1626.342', 'BASIS_ortslage: 'iNaturalist' → 'OT Hasseldieksdamm Hofholz', BASIS_ort: 'Kiel' → 'Kiel', name_staat: 'Deutschland' → 'Deutschland', name_provinz: '' → 'Schleswig-Holstein', name_kreis: 'nan' → 'Kiel', hoehenstufe: 'nan' → 'planar (unter 100mNN)', ozeanitaet: 'nan' → 'subozeanisch', zonalitaet: 'nan' → 'temperat'
+Fundort-Zuordnung:[1] --&gt; 1626,432 ' → ' 1626.432', 'BASIS_ortslage: 'iNaturalist' → 'Zentrum Südfriedhof', BASIS_ort: 'Schützenwall/Boiestraße - Kiel' → 'Kiel', name_staat: 'Deutschland' → 'Deutschland', name_provinz: '' → 'Schleswig-Holstein', name_kreis: 'nan' → 'Kiel', hoehenstufe: 'nan' → 'planar (unter 100mNN)', ozeanitaet: 'nan' → 'subozeanisch', zonalitaet: 'nan' → 'temperat'
+Fundort-Zuordnung:[2] --&gt; 1626,431 ' → ' 1626.431', 'BASIS_ortslage: 'iNaturalist' → 'OT Hasseldieksdamm Uhlenkrug-Tierheim', BASIS_ort: 'Kiel' → 'Kiel', name_staat: 'Deutschland' → 'Deutschland', name_provinz: '' → 'Schleswig-Holstein', name_kreis: 'nan' → 'Kiel', hoehenstufe: 'nan' → 'planar (unter 100mNN)', ozeanitaet: 'nan' → 'subozeanisch', zonalitaet: 'nan' → 'temperat'</code></pre>
+<h2 class="atx" id="6-best-practices">6. Best Practices</h2>
+<h3 class="atx" id="61-vorbereitung-in-inaturalist-expot">6.1 Vorbereitung in iNaturalist Expot</h3>
 <p><a href="https://www.inaturalist.org/observations/export?projects%5B%5D=mykis-kartierung">Beobachtungen exportieren · iNaturalist</a> </p>
 <p><img alt="" src="file:///C:/Users/Julian%20Grausgruber/AppData/Roaming/marktext/images/2026-02-16-18-21-04-image.png">Bei der Standardauswahl werden die Mykis Felder nicht mitexportiert. Als Empehlung alle Mykis Felder mitexportieren:
 Zurzeit werden folgeden Felder in der Konvertierung verwendet:</p>
@@ -1633,10 +1667,10 @@ Zurzeit werden folgeden Felder in der Konvertierung verwendet:</p>
 </ul>
 <p>Am besten einfach bei Geo alle aktiveren:</p>
 <p><img alt="" src="file:///C:/Users/Julian%20Grausgruber/AppData/Roaming/marktext/images/2026-02-16-18-20-42-image.png"></p>
-<h3 class="atx" id="52-backup-strategie">5.2 Backup-Strategie</h3>
+<h3 class="atx" id="62-backup-strategie">6.2 Backup-Strategie</h3>
 <p>Vor jedem Anhängen, ein Backup (Eine Kopie) von der Original Datei machen.</p>
-<h2 class="atx" id="6-fehlerbehebung">6. Fehlerbehebung</h2>
-<h3 class="atx" id="61-spalten-stimmen-nicht-uberein">6.1 Spalten stimmen nicht überein</h3>
+<h2 class="atx" id="7-fehlerbehebung">7. Fehlerbehebung</h2>
+<h4 class="atx" id="spalten-stimmen-nicht-uberein">Spalten stimmen nicht überein</h4>
 <p><strong>Problem:</strong> Beim Anhängen unterschiedliche Spalten</p>
 <p><strong>Ursache:</strong></p>
 <ul>
@@ -1649,7 +1683,11 @@ Zurzeit werden folgeden Felder in der Konvertierung verwendet:</p>
 <li>Optional: Alte Datei mit neuem Template re-konvertieren</li>
 </ol>
 <hr>
-<h2 class="atx" id="7-versions-historie">7 Versions-Historie</h2>
+<h2 class="atx" id="8-versions-historie">8 Versions-Historie</h2>
+<h4 class="atx" id="v080-2026-03-26">v0.8.0 (2026-03-26)</h4>
+<ul>
+<li>Namen und Kommentare Änderung</li>
+</ul>
 <h4 class="atx" id="v070-2026-03-15">v0.7.0 (2026-03-15)</h4>
 <ul>
 <li><p>Berechnung 64tel Quadrant MTB (1626,232) anstatt 16tel Quadrant MTB (1626,23)</p>

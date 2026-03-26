@@ -1,7 +1,7 @@
 # Dokumentation – inaturalist-to-mykis
 
-**Version:** 0.7.0  
-**Datum:** 2026-03-15
+**Version:** 0.8.0  
+**Datum:** 2026-03-26
 
 ---
 
@@ -319,9 +319,54 @@ Folgende Daten werden übertrage:
 
 Die originalen Geokoordianten des neuen Fundortes werden auch gelöscht.
 
-## 5. Best Practices
+## 5. Log
 
-### 5.1 Vorbereitung in iNaturalist Expot
+Das Programm erzeugt bei jeder Konvertierung ein Log Datei mit einem Datum, diese kann verwendet werden um noch genauere Details über die Fundortzurodnung zu bekommen.
+Es wird Details über die Referenz Fundort Datei ausgegeben wie z.b: Anzahl an Refernz Datensätze oder auch die "mtb" Spalte gefunden wurde oder auch wie viele verschiede 16tel Quadranten es gibt. 
+Es wird in der Datei auch jede Fundortzuordnung aufgelistet.
+
+z.b: Fundort-Zuordnung:[0] --> Das bedeutet der Index 0 in der iNaturalist Datei wurde wie angegeben verwändert.
+'BASIS_ortslage: 'iNaturalist' → 'OT Hasseldieksdamm Hofholz'
+Das heißt die BASIS_ortslage wurde auf OT Hasseldieksdamm Hofholz geändert.
+
+Bei jeder Konvertierung erstellt das Programm automatisch eine Log-Datei mit Zeitstempel. Diese Datei dient der Qualitätssicherung und liefert detaillierte Informationen darüber, wie die Fundortdaten verarbeitet und zugeordnet wurden.
+
+### Inhalte der Log-Datei
+
+Das Protokoll gibt Aufschluss über folgende Punkte:
+
+- Anzahl der geladenen Referenz-Datensätze.
+- Bestätigung, ob die benötigte MTB-Spalte (Messtischblatt) gefunden wurde.
+- Statistiken über die geografische Abdeckung (z. B. Anzahl der verschiedenen 16tel-Quadranten).
+- Status der geladenen Shapefiles für die geografische Validierung.
+- Detaillierte Fundort-Zuordnung
+
+#### Detaillierte Fundort-Zuordnung
+
+Ein Eintrag wie `Fundort-Zuordnung:[0]` bedeutet, dass der Datensatz mit dem Index 0 (Der Index muss immer +2 gerechnet werden für die exakte Excel Zeile) aus der iNaturalist-Quelldatei verarbeitet wurde. Die Pfeile (`→`) zeigen dabei die Transformation der Daten an:
+
+> **Beispiel:** `BASIS_ortslage: 'iNaturalist' → 'OT Hasseldieksdamm Hofholz'`  
+> Hier wurde der Name `iNaturalist` durch die Ortsbezeichnung aus der Referenzdatei ersetzt.
+
+**Beispiel Log**
+
+```
+Start inat to mykis convertation
+Info: Referenzdatei ausgewählt C:\workspace\INaturlist_Mykis_Konvertierung\Testdaten\MTB\fundorte_sh.xlsx
+Info: Referenzdatei geladen: 5808 Spalten
+Info: MTB-Spalte gefunden als 'mtb'
+Lade Shapefile: C:\workspace\INaturlist_Mykis_Konvertierung _github\dist\inaturalist-to-mykis\_internal\assets\b25_utm32s\b25_utm32s.shp
+Shapefile geladen: 2980 MTB-Blätter
+Referenz Datei Einträge: 5808
+Referenz Datei verschiedene 16tel Quadranten: 1778
+Fundort-Zuordnung:[0] --> 1626,342 ' → ' 1626.342', 'BASIS_ortslage: 'iNaturalist' → 'OT Hasseldieksdamm Hofholz', BASIS_ort: 'Kiel' → 'Kiel', name_staat: 'Deutschland' → 'Deutschland', name_provinz: '' → 'Schleswig-Holstein', name_kreis: 'nan' → 'Kiel', hoehenstufe: 'nan' → 'planar (unter 100mNN)', ozeanitaet: 'nan' → 'subozeanisch', zonalitaet: 'nan' → 'temperat'
+Fundort-Zuordnung:[1] --> 1626,432 ' → ' 1626.432', 'BASIS_ortslage: 'iNaturalist' → 'Zentrum Südfriedhof', BASIS_ort: 'Schützenwall/Boiestraße - Kiel' → 'Kiel', name_staat: 'Deutschland' → 'Deutschland', name_provinz: '' → 'Schleswig-Holstein', name_kreis: 'nan' → 'Kiel', hoehenstufe: 'nan' → 'planar (unter 100mNN)', ozeanitaet: 'nan' → 'subozeanisch', zonalitaet: 'nan' → 'temperat'
+Fundort-Zuordnung:[2] --> 1626,431 ' → ' 1626.431', 'BASIS_ortslage: 'iNaturalist' → 'OT Hasseldieksdamm Uhlenkrug-Tierheim', BASIS_ort: 'Kiel' → 'Kiel', name_staat: 'Deutschland' → 'Deutschland', name_provinz: '' → 'Schleswig-Holstein', name_kreis: 'nan' → 'Kiel', hoehenstufe: 'nan' → 'planar (unter 100mNN)', ozeanitaet: 'nan' → 'subozeanisch', zonalitaet: 'nan' → 'temperat'
+```
+
+## 6. Best Practices
+
+### 6.1 Vorbereitung in iNaturalist Expot
 
 [Beobachtungen exportieren · iNaturalist](https://www.inaturalist.org/observations/export?projects%5B%5D=mykis-kartierung) 
 
@@ -345,13 +390,13 @@ Am besten einfach bei Geo alle aktiveren:
 
 ![](C:\Users\Julian%20Grausgruber\AppData\Roaming\marktext\images\2026-02-16-18-20-42-image.png)
 
-### 5.2 Backup-Strategie
+### 6.2 Backup-Strategie
 
 Vor jedem Anhängen, ein Backup (Eine Kopie) von der Original Datei machen.
 
-## 6. Fehlerbehebung
+## 7. Fehlerbehebung
 
-### 6.1 Spalten stimmen nicht überein
+#### Spalten stimmen nicht überein
 
 **Problem:** Beim Anhängen unterschiedliche Spalten
 
@@ -367,7 +412,11 @@ Vor jedem Anhängen, ein Backup (Eine Kopie) von der Original Datei machen.
 
 ---
 
-## 7 Versions-Historie
+## 8 Versions-Historie
+
+#### v0.8.0 (2026-03-26)
+
+- Namen und Kommentare Änderung
 
 #### v0.7.0 (2026-03-15)
 
