@@ -5,3 +5,4 @@ build/
 *.spec
 .vscode/
 *.pyc
+medien_docs\

@@ -7,29 +7,34 @@
 
 ## 1. Einleitung
 
-Das Programm inaturalist-to-mykis konvertiert Pilzbeobachtungen aus iNaturalist in ein Format, das in MykIS importiert werden kann. 
+Das Programm inaturalist-to-mykis konvertiert Pilzbeobachtungen von iNaturalist in ein Format, das direkt in MykIS importiert werden kann. Dabei werden vordefinierte Spalten einer exportierten iNaturalist-Datei in das kompatible MykIS-Dateiformat überführt.
 
+### Details zum Dateiformat
 
-Das Programm kovertiert eine exportierte iNaturalist Datei bzw. vordefinierte Spalten in eine kompatibles Mykis Dateiformat.
-Mykis Referenz Dateiformat: mykdaten.xls (siehe 2026-02-07_layout_mykdaten.xls [mykdaten]([inaturalist-to-mykis/assets at master · PhyllobatesTerribilies/inaturalist-to-mykis](https://github.com/PhyllobatesTerribilies/inaturalist-to-mykis/tree/master/assets))
+Referenzformat: mykdaten.xls
+Layout: Die verwendete Vorlage für das Programm findet man unter [2026-02-07_layout_mykdaten.xls](https://github.com/PhyllobatesTerribilies/inaturalist-to-mykis/tree/master/assets).
 
+### Konvertierung
 
+1. Einfach - Dateierstellung: \
+   Es wird nur die exportierte iNaturalist Datei verwendet und das Programm erstellt eine neue Datei mit den neunen Datensätzen
+2. Anhängen an bestehende Datei \
+   Es wird die exportierte iNaturalist Datei verwendet und eine bestehende mykdaten.xls Datei. Bei der Konvertierung werden die neuen Datensätze an die mykdaten.xls Datei angehängt. Zu beachten ist das es eine Datei ist mit den selben Spalten wie mykdaten.xls.
+3. Fundortzuordnung \
+   Hierbei werden neue Fundorte bestehende Fundorten zugeordnet. Hierfür muss dem Programm eine entsprechende Fundort-Datei bereitgestellt werden.
 
-
-Es gibt die Option eine Datei zu erstellen bei der Konvertierung oder die Daten auf eine bestehende Datei anzuhängen. Die bestehende Datei muss eine Datei mit den selben Spalten wie die mykdaten.xls sein, ansonsten werden neue Spalten hinzugefügt.
-
-Desweiteren gibt es einen Funktion die neunen Fundorte zu bestehende fundorte zuzuordnen. Dabei muss im Programm einen Fundort Datei angehängt werden.
+Weitere Informationen findet man weiter un in der Dokumentation.
 
 ### Unterstützte Formate:
 
 - **Eingabe:** CSV, XLSX, XLS
 - **Ausgabe:** XLS, XLSX, CSV
 
----
-
 ## 2. Start
 
 ### 2.1 Programmstart
+
+![alt text](C:\workspace\INaturlist_Mykis_Konvertierung%20_github\docs\medien_docs\image.png)
 
 ```
 Doppelklick auf: inaturalist-to-mykis.exe
@@ -37,17 +42,15 @@ Doppelklick auf: inaturalist-to-mykis.exe
 
 ### 2.2 Hauptfenster
 
-Nach dem Start öffnet sich das Hauptfenster:
+Nach dem ausführen des Programms öffnet sich folgendes Fenster:
 
 ![](C:\Users\Julian%20Grausgruber\AppData\Roaming\marktext\images\2026-03-15-18-02-35-image.png)**Legende:**
 
 - GRÜN **Eingabefeld:** iNaturalist-Exportdatei
-- ROT **Ausgabefeld:** Ziel für konvertierte Datei
-- ROSA **Fundort Zuordnungs Liste:** Live-Status und Meldungen
-- GELB **Optionen:** Anhängen an bestehende Datei
+- ROT **Ausgabefeld:** Konvertierte Datei bzw bestehende Datei (mykdate.xls)
+- ROSA **Fundort Zuordnungs Liste:** Liste bestehender Fundort zur Fundortzurodnung bei neuen Datensätzen
+- GELB **Optionen:** Auswahloption, ob die neuen Datensätze an einen bestehende Datei angehängt werden soll
 - BLAU **Protokoll:** Live-Status und Meldungen
-
----
 
 ## 3. Bedienung
 
@@ -58,15 +61,16 @@ Nach dem Start öffnet sich das Hauptfenster:
 - Klick auf **Durchsuchen…** (bei Eingabedatei)
 - Wähle iNaturalist-Export (z.B. `observations-527425.csv`)
 
-**Schritt 2:** Ausgabedatei prüfen
+**Schritt 2:** Ausgabedatei
 
-- Automatischer Vorschlag: `observations-527425_mykis.xls`
-- Optional: Klick auf **Ziel wählen…** zum Ändern
+- Nach dem eine Eingabedatei gewählt wurde, wird eine Automatischer Datei Vorschlag vom Programm erzeugt, im selben Ordner wie die Eingabedatei.
+  Beispiel: `observations-527425_mykis.xls`
+- Dateiort und Name kann jederzeit geändert werden.
 
 **Schritt 3:** Konvertieren
 
 - Klick auf **Konvertieren**
-- Fortschritt im Protokollfenster verfolgen
+- Weitere Information zur Konvertierung findet man in der Protokoll Ausgabe
 
 **Protokoll-Ausgabe (Beispiel):**
 
@@ -89,18 +93,18 @@ Datei: C:\...\observations-527425_mykis.xls
 ==================================================
 ```
 
----
-
 ### 3.2 Anhängen an bestehende Datei
 
 **Schritt 1:** Eingabedatei wählen
 
-- Neue iNaturalist-Beobachtungen laden
+- Klick auf **Durchsuchen…** (bei Eingabedatei)
+- Wähle iNaturalist-Export (z.B. `observations-527425.csv`)
 
 **Schritt 2:** Anhänge-Modus aktivieren
 
 - Checkbox aktivieren: **"An bestehende Mykis-Datei anhängen"**
-- Button ändert sich zu: **"Datei zum Anhängen wählen…"**
+- Bei der Auswahl der Ausgabedatei ändert sich der Button zu: **"Datei zum Anhängen wählen…"**
+  ![alt text](C:\workspace\INaturlist_Mykis_Konvertierung%20_github\docs\medien_docs\image-2.png)
 
 **Schritt 3:** Bestehende Datei wählen
 
@@ -110,7 +114,7 @@ Datei: C:\...\observations-527425_mykis.xls
 **Schritt 4:** Konvertieren
 
 - Neue Daten werden **unten an** die bestehende Datei angehängt
-- Die ausgewählte Datei wird **überschrieben** (Backup empfohlen!)
+- Zur Sicherheit soll vor der Konvertierung ein Backup, von der bestehenden Datei, erzeugt werden.
 
 **Protokoll-Ausgabe (Beispiel):**
 
@@ -136,13 +140,11 @@ INFO: Tabelle eingelesen
 ==================================================
 ```
 
----
-
-### 3.3 Spalten-Kompatibilitätsprüfung
+**Spalten-Kompatibilitätsprüfung**
 
 Beim Konvertieren prüft das Programm automatisch die Spaltenübereinstimmung. Es ist eine Referenz mykdaten.xls hinterlegt, mit der die bestehende Datei beim Anhängen überprüft wird ob alle Spalten vorhanden sind.
 
-**Szenario: Spalten stimmen NICHT überein**
+Szenario: Spalten stimmen NICHT überein:
 
 ```
 ⚠️  WARNUNG: Spalten stimmen nicht überein!
@@ -177,23 +179,55 @@ Beim Konvertieren prüft das Programm automatisch die Spaltenübereinstimmung. E
 
 ---
 
+### 3.3 Fundortzurodnung
+
+**Schritt 1:** Eingabedatei und Ausgabedatei wählen 
+
+- Die beiden Datein wie in den vorheringen Punkten auswählen, je nach dem ob man einen Datei erstellen oder an einen bestehende Datei anhängen möchte
+
+**Schritt 2:** Fundort Referenzliste auswählen
+
+- Die Referenz Fundortliste auswählen.
+
+**Schritt 3:** Konvertieren
+
+- Die neuen Datensätze werden jetzt mit der Referenz Fundortliste überprüft. Bei Übereinstimmung mit den 16tel Quadranten, werden vordefinierte Spalten des Refernzdatensatzes auf den neuen Datensatz kopiert.
+- Mehr Information zu der Fundortzurordnung findest man hier. [Fundortzurordnung](#44-fundort-zurodnung)
+
 ## 4. Spalten-Mapping: iNaturalist → Mykis
 
-### 4.1 Übersicht der Hauptspalten
+### 4.1 Übersicht der Spalten
 
-| iNaturalist Feld                                | Mykis Spalte              | Beschreibung                                                       |
-| ----------------------------------------------- | ------------------------- | ------------------------------------------------------------------ |
-| `scientific_name`                               | `GATTUNG` + `ART`         | Wird aufgetrennt (z.B. "Amanita muscaria" → "Amanita", "muscaria") |
-| `observed_on`                                   | `BASIS_datum1` + `datum2` | Datum im Format TT.MM.JJJJ                                         |
-| `user_name` / `user_login`                      | `erfasser`                | iNaturalist-Benutzername                                           |
-| `url`                                           | `nachweisquelle`          | Link zur iNaturalist-Beobachtung                                   |
-| `image_url`                                     | `Foto_Zeichnung`          | Link zum Foto                                                      |
-| `latitude`                                      | `nordwert2`               | Breitengrad (Y-Koordinate)                                         |
-| `longitude`                                     | `ostwert2`                | Längengrad (X-Koordinate)                                          |
-| `description`                                   | `substrat_text`           | Beobachtungsnotizen                                                |
-| `field:mykis-leg.` / `user_name` / `user_login` | `sammler`                 | Sammler / Finder                                                   |
-| `field:mykis-det.` / `user_name` / `user_login` | `bestimmer`               | Bestimmer                                                          |
-|                                                 |                           |                                                                    |
+Diese soll ein Überblick bieten über die Feldzuweisung bzw. Berarbeitung der von iNaturalist zu Mykis Spalten.
+Für manche Mykis Spalten werden mehrere iNaturalist Felder verwendet, da nicht immer alle eingetragen sind. So wie die Reihung im iNaturalist Feld in der folgenden Tabelle ist, so wird auch die Priorität gewertet.\
+Beispiel: Mykis: Gattung --> iNaturalist: scientific_name \ species_guess --> Das bedeutet solange im Feld scientific_name etwas vorhanden ist, wird das verwendet.
+
+| Mykis Spalte    | iNaturalist Feld                          | Beschreibung                                                                                                                            |
+| --------------- | ----------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------- |
+| Gattung         | scientific_name \ species_guess           | 1. Wort wird verwendet z.b: Amanita muscaria --> "Amanita"                                                                              |
+| ART             | scientific_name \ species_guess           | Alle Wörter nach dem 1. wird verwendet z.b: Amanita muscaria --> "muscaria"                                                             |
+| BASIS_datum1    | observed_on \ observed_on_string          | Datum Format wird extrahiert (JJJJ-MM-DD) und als TT.MM.JJJJ ausgegeben                                                                 |
+| datum2          | observed_on \ observed_on_string          | Datum Format wird extrahiert (JJJJ-MM-DD) und als TT.MM.JJJJ ausgegeben                                                                 |
+| erfasser        | user_name \ user_login                    | 1. Wort wird als Vorname verwendet und die Restlichen als Nachname - Formatausgabe: Nachname, Vorname z.b: Maren Kamke --> Kamke, Maren |
+| sammler         | field:mykis-leg. \ user_name \ user_login | 1. Wort wird als Vorname verwendet und die Restlichen als Nachname - Formatausgabe: Nachname, Vorname z.b: Maren Kamke --> Kamke, Maren |
+| bestimmer       | field:mykis-det. \ user_name \ user_login | 1. Wort wird als Vorname verwendet und die Restlichen als Nachname - Formatausgabe: Nachname, Vorname z.b: Maren Kamke --> Kamke, Maren |
+| nachweisquelle  | -                                         | "iNaturalist" wird fix hinterlegt                                                                                                       |
+| nordwert2       | latitude                                  | Ortskoordinaten                                                                                                                         |
+| ostwert2        | longitude                                 | Ortskoordinaten                                                                                                                         |
+| Foto_Zeichnung  | -                                         | "D" wird fix hinterlegt                                                                                                                 |
+| art_bemerkung   | url                                       | Link zur iNaturalist-Beobachtung                                                                                                        |
+| organ_substrat  | field:mykis-substrat_organ                |                                                                                                                                         |
+| substratzustand | field:mykis-substrat_zustand              |                                                                                                                                         |
+| substrat_text   | description                               |                                                                                                                                         |
+| wuchsstelle     | field:mykis-wuchsstelle                   |                                                                                                                                         |
+| stadium         | field:mykis-stadium                       |                                                                                                                                         |
+| sonderstandort  | field:mykis-pflanzengesellschaft          |                                                                                                                                         |
+| Wirt            | field:mykis-substrat/-wirt                |                                                                                                                                         |
+| name_staat      | place_country_name / place_guess          | Land                                                                                                                                    |
+| name_provinz    | place_state_name / place_guess            | Bundesland                                                                                                                              |
+| BASIS_ort       | place_guess                               | Ort                                                                                                                                     |
+| BASIS_ortslage  | -                                         | "iNaturalist" wird fix hinterlegt                                                                                                       |
+| MTB             | -                                         | MTB-Q64 wird berechnet aus nordwert2 und ostwert2                                                                                       |
 
 ### 4.2 Ortsdaten
 
@@ -253,28 +287,10 @@ Quelle:   place_guess (erster Teil bei 4+ Teilen)
           → "Meilwald mit Eisgrube"
 ```
 
-### 4.3 Mykis Custom Fields
-
-Diese Spalten werden aus iNaturalist Custom Fields übernommen:
-
-| iNaturalist Custom Field       | Mykis Spalte      | Beschreibung                                            |
-| ------------------------------ | ----------------- | ------------------------------------------------------- |
-| `field:mykis-leg.`             | `sammler`         | Sammler (mit Fallback auf `user_name` / `user_login`)   |
-| `field:mykis-det.`             | `bestimmer`       | Bestimmer (mit Fallback auf `user_name` / `user_login`) |
-| `field:mykis-substrat_organ`   | `organ_substrat`  | Substrat-Organ                                          |
-| `field:mykis-substrat_zustand` | `substratzustand` | Zustand des Substrats                                   |
-| `field:mykis-wuchsstelle`      | `wuchsstelle`     | Wuchsstelle                                             |
-| `field:mykis-stadium`          | `stadium`         | Stadium                                                 |
-| `ield:mykis-substrat/-wirt`    | `Wirt`            | Wirt                                                    |
-
-### 4.4 iNaturalist Daten Filterung
+### 4.3 iNaturalist Daten Filterung
 
 Die Daten von iNaturalist werden bei der Konvertierung gefiltert und aussortiert.
 Wenn das Feld "field:mykis-erfassung" in der Datei vorhanden ist,  wird jede Zeile dieser Spalte auf diese Wörter überprüft.
-
-
-
-
 
 | Wörter |
 | ------ |
@@ -282,11 +298,7 @@ Wenn das Feld "field:mykis-erfassung" in der Datei vorhanden ist,  wird jede Zei
 | ja     |
 |        |
 
-
-
- 
-
-## 4.5 Fundort Zurodnung
+## 4.4 Fundort Zurodnung
 
 Die Fundort Zurodnung ist nur aktiv, solange eine Datei als Fundort Zuodrnungs Liste hinterlegt ist.
 
@@ -296,24 +308,16 @@ Wenn es mehrere bestehende Fundort in der Fundort Zuordnungs Liste vorhanden sin
 Folgende Daten werden übertrage:
 
 - BASIS_ort
-
 - BASIS_ortslage
-
 - name_staat
-
 - name_provinz
-
 - MTB
-
 - name_kreis
-
 - hoehenstufe
-
 - ozeanitaet
-
 - zonalitaet
 
-Die originalen Geokoordianten des neuen Fundortes werden gelöscht
+Die originalen Geokoordianten des neuen Fundortes werden auch gelöscht.
 
 ## 5. Best Practices
 
@@ -321,27 +325,20 @@ Die originalen Geokoordianten des neuen Fundortes werden gelöscht
 
 [Beobachtungen exportieren · iNaturalist](https://www.inaturalist.org/observations/export?projects%5B%5D=mykis-kartierung) 
 
-![](C:\Users\Julian%20Grausgruber\AppData\Roaming\marktext\images\2026-02-16-18-21-04-image.png)Bei der Standardauswahl sind, werden die Mykis Felder nicht mitexportiert, also entweder alle mykis Felder mitexportieren oder nur die wichtigstern:
+![](C:\Users\Julian%20Grausgruber\AppData\Roaming\marktext\images\2026-02-16-18-21-04-image.png)Bei der Standardauswahl werden die Mykis Felder nicht mitexportiert. Als Empehlung alle Mykis Felder mitexportieren:
 Zurzeit werden folgeden Felder in der Konvertierung verwendet:
 
--  field:mykis-leg.
-
--  field:mykis-det.
-
--  field:mykis-stadium
-
+- field:mykis-leg.
+- field:mykis-det.
+- field:mykis-stadium
 - field:mykis-substrat_zustand
-
 - field:mykis-substrat/-wirt
-
--  field:mykis-substrat_organ
-
--  field:mykis-wuchsstelle
+- field:mykis-substrat_organ
+- field:mykis-wuchsstelle
 
 Folgende Felder sind auch noch wichtig um eine bessere Ortbeschreibung bzw eine konsistentere Ausgabe zu haben:
 
 - place_country_name
-
 - place_state_name
 
 Am besten einfach bei Geo alle aktiveren:

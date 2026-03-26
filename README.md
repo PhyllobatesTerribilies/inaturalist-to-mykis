@@ -39,4 +39,4 @@ For further explantion see here or in the documentation from the latest release:
 
 To use  the program just download **inaturalist-to-mykis.zip** here:
 
-[➔ inaturlalist-to-mykis latest release](https://github.com/PhyllobatesTerribilies/inaturalist-to-mykis/releases/latest)[Releases · PhyllobatesTerribilies/inaturalist-to-mykis](https://github.com/PhyllobatesTerribilies/inaturalist-to-mykis/releases)
+([Releases · PhyllobatesTerribilies/inaturalist-to-mykis](https://github.com/PhyllobatesTerribilies/inaturalist-to-mykis/releases))

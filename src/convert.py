@@ -693,8 +693,6 @@ def map_inat_to_mykis(
     basis_ort = extract_basis_ort(df_in)
     assign_if_exists(out_df, "BASIS_ort", basis_ort)
 
-    # Standortbeschreibung (fallback: 1. Teil bei 4+ Teilen)
-    # basis_ortslage = extract_from_place_guess(df_in, position=0, minimum_parts=4)
     assign_if_exists(
         out_df, "BASIS_ortslage", pd.Series("iNaturalist", index=df_in.index)
     )
