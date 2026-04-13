@@ -421,6 +421,14 @@ def convert_location_to_mtbq64(
                 referenz_map[id_key] = []
             referenz_map[id_key].append((idx, ref_row))
 
+            if pd.isnull(ref_row["ostwert2"]) or pd.isnull(ref_row["nordwert2"]):
+                # error
+                log_file_func(
+                    f"Referenz Fundort[{idx}] hat keinen Geokoordinaten (ostwert2,nordwert2)"
+                )
+
+
+
     log_file_func(f"Referenz Datei Einträge: {len(mtb_referenc_df)}")
     log_file_func(f"Referenz Datei verschiedene 16tel Quadranten: {len(referenz_map)}")
 
@@ -437,7 +445,7 @@ def convert_location_to_mtbq64(
 
         if treffer.empty:
             log_file_func(
-                "Fundort[{dfRow}] von INaturalist Liste nicht innerhalb der Topographischen Karte Deutschland TK25"
+                f"Fundort[{dfRow}] von INaturalist Liste nicht innerhalb der Topographischen Karte Deutschland TK25"
             )
             continue
 
@@ -516,14 +524,10 @@ def convert_location_to_mtbq64(
                             min_distanz = distanz
                             min_distanz_series = ref_row
 
-                    else:
-                        # error
-                        log_file_func(
-                            f"Referenz Fundort[{referenz_idx}] hat keinen Geokoordinaten (ostwert2,nordwert2)"
-                        )
+                    
                 if min_distanz == float("inf"):
                     log_file_func(
-                        f"Error: Keiner der 16tel Quadranten [{mtbq16}] hat Geokoordinaten (ostwert2,nordwert2)"
+                        f"Fundort-Zuordnung:[{dfRow}] --> Error: Keiner der Referenz 16tel Quadranten [{mtbq16}] hat Geokoordinaten (ostwert2,nordwert2)"
                     )
                 else:
                     # copy referenz auf in liste
@@ -633,14 +637,9 @@ def map_inat_to_mykis(
     taxon_names = (
         df_in.apply(pick_taxon, axis=1).astype("string").fillna("").str.strip()
     )
-    parts = taxon_names.str.split(r"\s+", n=2, expand=True)
 
-    genus = parts[0].fillna("").str.strip()
-    epithet = (
-        parts[1].fillna("").str.strip()
-        if 1 in parts.columns
-        else pd.Series("", index=df_in.index)
-    )
+    genus = taxon_names.str.split(r"\s+").str[0].fillna("").str.strip()
+    epithet = taxon_names.str.split(r"\s+", n=1).str[1].fillna("").str.strip()
 
     assign_if_exists(out_df, "GATTUNG", genus)
     assign_if_exists(out_df, "ART", epithet)
@@ -697,18 +696,25 @@ def map_inat_to_mykis(
         out_df, "BASIS_ortslage", pd.Series("iNaturalist", index=df_in.index)
     )
 
+
+
     # -------------------------------------------------------------------------
     # KOORDINATEN (latitude=Nordwert/Y, longitude=Ostwert/X)
     # -------------------------------------------------------------------------
     assign_if_exists(out_df, "nordwert2", copy_numeric_column(df_in, "latitude"))
     assign_if_exists(out_df, "ostwert2", copy_numeric_column(df_in, "longitude"))
 
-    # -------------------------------------------------------------------------
-    # MEDIA
-    # -------------------------------------------------------------------------
-    assign_if_exists(out_df, "Foto_Zeichnung", pd.Series("D", index=df_in.index))
+    # assign_if_exists(out_df, "Foto_Zeichnung", pd.Series("D", index=df_in.index))
+    id_col = copy_column(df_in, "id")      
+    if id_col is not None:
+        foto_series = "iNNr:" + id_col.astype(str).fillna("")
+    else:
+        foto_series = pd.Series("iNNr:", index=df_in.index)
+    assign_if_exists(out_df, "Foto_Zeichnung", foto_series)
 
-    assign_if_exists(out_df, "art_bemerkung", copy_column(df_in, "url"))
+    assign_if_exists(out_df, "art_bemerkung", copy_column(df_in, "field:mykis-bemerkung"))
+
+    assign_if_exists(out_df, "Ungenauigkeit", copy_column(df_in, "positional_accuracy"))
 
     # -------------------------------------------------------------------------
     # MYKIS CUSTOM FIELDS

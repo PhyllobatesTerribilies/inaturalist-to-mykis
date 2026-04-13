@@ -1,7 +1,7 @@
 # Dokumentation – inaturalist-to-mykis
 
-**Version:** 0.8.0  
-**Datum:** 2026-03-26
+**Version:** 0.9.0  
+**Datum:** 2026-04-13
 
 ---
 
@@ -214,8 +214,8 @@ Beispiel: Mykis: Gattung --> iNaturalist: scientific_name \ species_guess --> Da
 | nachweisquelle  | -                                         | "iNaturalist" wird fix hinterlegt                                                                                                       |
 | nordwert2       | latitude                                  | Ortskoordinaten                                                                                                                         |
 | ostwert2        | longitude                                 | Ortskoordinaten                                                                                                                         |
-| Foto_Zeichnung  | -                                         | "D" wird fix hinterlegt                                                                                                                 |
-| art_bemerkung   | url                                       | Link zur iNaturalist-Beobachtung                                                                                                        |
+| Foto_Zeichnung  | id                                        | "iNNr: id"  z.b:z.b: iNNr:260724269                                                                                                     |
+| art_bemerkung   | field:mykis-bemerkung                     |                                                                                                                                         |
 | organ_substrat  | field:mykis-substrat_organ                |                                                                                                                                         |
 | substratzustand | field:mykis-substrat_zustand              |                                                                                                                                         |
 | substrat_text   | description                               |                                                                                                                                         |
@@ -228,6 +228,7 @@ Beispiel: Mykis: Gattung --> iNaturalist: scientific_name \ species_guess --> Da
 | BASIS_ort       | place_guess                               | Ort                                                                                                                                     |
 | BASIS_ortslage  | -                                         | "iNaturalist" wird fix hinterlegt                                                                                                       |
 | MTB             | -                                         | MTB-Q64 wird berechnet aus nordwert2 und ostwert2                                                                                       |
+| Ungenauigkeit   | positional_accuracy                       |                                                                                                                                         |
 
 ### 4.2 Ortsdaten
 
@@ -414,6 +415,20 @@ Vor jedem Anhängen, ein Backup (Eine Kopie) von der Original Datei machen.
 
 ## 8 Versions-Historie
 
+#### v0.9.0 (2026-04-13)
+
+- Auf das Mykis -Feld Foto_Zeichnung wird jetzt "iNNr: + INaturlist ID" geschrieben z.b: iNNr:260724269
+- Auf das Mykis -Feld art_bemerkung wird jetzt das iNaturalist Feld: field:mykis-bemerkung kopiert
+- Auf das Mykis -Feld Ungenauigkeit wird jetzt das iNaturalist Feld: positional_accuracy kopiert
+- bugfix log File
+  -  Fundort ID Anzeige bei Fehler
+  -  Fundort ID Anzeige, wenn Referenz Fundort keine Geokoordinaten haben
+- bugfix Feld ART --> es wurde bisher nur das zweite Wort als Art verwendet 
+  - alt: Fuligo	septica rufa --> septica	
+  - jetzt: Fuligo	septica rufa --> septica rufa
+  
+
+
 #### v0.8.0 (2026-03-26)
 
 - Namen und Kommentare Änderung
@@ -500,4 +515,3 @@ Vor jedem Anhängen, ein Backup (Eine Kopie) von der Original Datei machen.
 
 ---
 
-Version 0.3.0 | Stand: 2026-02-16

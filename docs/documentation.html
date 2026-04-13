@@ -1249,7 +1249,7 @@ pre[class*="language-"] {
 </head>
 <body>
   <article class="markdown-body"><h1 class="atx" id="dokumentation--inaturalist-to-mykis">Dokumentation – inaturalist-to-mykis</h1>
-<p><strong>Version:</strong> 0.8.0<br><strong>Datum:</strong> 2026-03-26</p>
+<p><strong>Version:</strong> 0.9.0<br><strong>Datum:</strong> 2026-04-13</p>
 <hr>
 <h2 class="atx" id="1-einleitung">1. Einleitung</h2>
 <p>Das Programm inaturalist-to-mykis konvertiert Pilzbeobachtungen von iNaturalist in ein Format, das direkt in MykIS importiert werden kann. Dabei werden vordefinierte Spalten einer exportierten iNaturalist-Datei in das kompatible MykIS-Dateiformat überführt.</p>
@@ -1469,13 +1469,13 @@ Für manche Mykis Spalten werden mehrere iNaturalist Felder verwendet, da nicht 
 </tr>
 <tr>
 <td>Foto_Zeichnung</td>
-<td>-</td>
-<td>"D" wird fix hinterlegt</td>
+<td>id</td>
+<td>"iNNr: id"  z.b:z.b: iNNr:260724269</td>
 </tr>
 <tr>
 <td>art_bemerkung</td>
-<td>url</td>
-<td>Link zur iNaturalist-Beobachtung</td>
+<td>field:mykis-bemerkung</td>
+<td></td>
 </tr>
 <tr>
 <td>organ_substrat</td>
@@ -1536,6 +1536,11 @@ Für manche Mykis Spalten werden mehrere iNaturalist Felder verwendet, da nicht 
 <td>MTB</td>
 <td>-</td>
 <td>MTB-Q64 wird berechnet aus nordwert2 und ostwert2</td>
+</tr>
+<tr>
+<td>Ungenauigkeit</td>
+<td>positional_accuracy</td>
+<td></td>
 </tr>
 </tbody></table>
 <h3 class="atx" id="42-ortsdaten">4.2 Ortsdaten</h3>
@@ -1684,6 +1689,22 @@ Zurzeit werden folgeden Felder in der Konvertierung verwendet:</p>
 </ol>
 <hr>
 <h2 class="atx" id="8-versions-historie">8 Versions-Historie</h2>
+<h4 class="atx" id="v090-2026-04-13">v0.9.0 (2026-04-13)</h4>
+<ul>
+<li>Auf das Mykis -Feld Foto_Zeichnung wird jetzt "iNNr: + INaturlist ID" geschrieben z.b: iNNr:260724269</li>
+<li>Auf das Mykis -Feld art_bemerkung wird jetzt das iNaturalist Feld: field:mykis-bemerkung kopiert</li>
+<li>Auf das Mykis -Feld Ungenauigkeit wird jetzt das iNaturalist Feld: positional_accuracy kopiert</li>
+<li>bugfix log File<ul>
+<li>Fundort ID Anzeige bei Fehler</li>
+<li>Fundort ID Anzeige, wenn Referenz Fundort keine Geokoordinaten haben</li>
+</ul>
+</li>
+<li>bugfix Feld ART --&gt; es wurde bisher nur das zweite Wort als Art verwendet <ul>
+<li>alt: Fuligo    septica rufa --&gt; septica    </li>
+<li>jetzt: Fuligo    septica rufa --&gt; septica rufa</li>
+</ul>
+</li>
+</ul>
 <h4 class="atx" id="v080-2026-03-26">v0.8.0 (2026-03-26)</h4>
 <ul>
 <li>Namen und Kommentare Änderung</li>
@@ -1771,7 +1792,6 @@ Zurzeit werden folgeden Felder in der Konvertierung verwendet:</p>
 <li>Koordinaten-Export</li>
 </ul>
 <hr>
-<p>Version 0.3.0 | Stand: 2026-02-16</p>
 </article>
 </body>
 </html>
