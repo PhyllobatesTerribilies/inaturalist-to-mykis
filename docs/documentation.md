@@ -1,7 +1,7 @@
 # Dokumentation – inaturalist-to-mykis
 
-**Version:** 0.9.0  
-**Datum:** 2026-04-13
+**Version:** 0.10.0  
+**Datum:** 2026-05-18
 
 ---
 
@@ -44,12 +44,13 @@ Doppelklick auf: inaturalist-to-mykis.exe
 
 Nach dem ausführen des Programms öffnet sich folgendes Fenster:
 
-![](C:\Users\Julian%20Grausgruber\AppData\Roaming\marktext\images\2026-03-15-18-02-35-image.png)**Legende:**
+![](C:\Users\Julian%20Grausgruber\AppData\Roaming\marktext\images\2026-05-18-12-04-38-image.png)**Legende:**
 
 - GRÜN **Eingabefeld:** iNaturalist-Exportdatei
 - ROT **Ausgabefeld:** Konvertierte Datei bzw bestehende Datei (mykdate.xls)
-- ROSA **Fundort Zuordnungs Liste:** Liste bestehender Fundort zur Fundortzurodnung bei neuen Datensätzen
-- GELB **Optionen:** Auswahloption, ob die neuen Datensätze an einen bestehende Datei angehängt werden soll
+- ROSA **Fundortrefernz Liste:** Liste bestehender Fundort zur Fundortzurodnung bei neuen Datensätzen
+- SCHWARZ **Namenszurodnungs Liste:** List mit user_login und Mykisnamen
+- GELB **Optionen:** Auswahloption,
 - BLAU **Protokoll:** Live-Status und Meldungen
 
 ## 3. Bedienung
@@ -179,7 +180,7 @@ Szenario: Spalten stimmen NICHT überein:
 
 ---
 
-### 3.3 Fundortzurodnung
+### 3.3 Fundortzuordnung
 
 **Schritt 1:** Eingabedatei und Ausgabedatei wählen 
 
@@ -193,6 +194,23 @@ Szenario: Spalten stimmen NICHT überein:
 
 - Die neuen Datensätze werden jetzt mit der Referenz Fundortliste überprüft. Bei Übereinstimmung mit den 16tel Quadranten, werden vordefinierte Spalten des Refernzdatensatzes auf den neuen Datensatz kopiert.
 - Mehr Information zu der Fundortzurordnung findest man hier. [Fundortzurordnung](#44-fundort-zurodnung)
+
+## 3.4 Namenszuordnung
+
+**Schritt 1:** Eingabedatei und Ausgabedatei wählen
+
+- Die beiden Datein wie in den vorheringen Punkten auswählen, je nach dem ob man einen Datei erstellen oder an einen bestehende Datei anhängen möchte
+
+**Schritt 2:** Namenszurodnungs Liste auswählen
+
+- Achtung Liste muss mindestens die Spalten "user_login" und "mykis-namen" haben. Die Spaltennamen muss exakt sein (Groß & Kleinschreibung ist egal)
+  
+  ![](C:\Users\Julian%20Grausgruber\AppData\Roaming\marktext\images\2026-05-18-12-10-39-image.png)
+
+**Schritt 2:** Konvertieren
+
+- Die neuen Datensätze werden jetzt mit der Namenszurodnungs Liste überprüft. Bei Übereinstimmung mit einem user_login, wird der Mykis Name in den neuen Datensatz im Feld "Erfasser" eingetragen
+- Mehr Information zu der Namenszurordnung findest man hier [Namenzurordnung](#45-namenszuordnung). 
 
 ## 4. Spalten-Mapping: iNaturalist → Mykis
 
@@ -320,6 +338,30 @@ Folgende Daten werden übertrage:
 
 Die originalen Geokoordianten des neuen Fundortes werden auch gelöscht.
 
+### 4.5 Namenszuordnung
+
+Die Namenszurodnung ist nur aktiv, solange eine Datei als Namenszuodrnungs Liste hinterlegt ist.
+
+Folgende Spalten muss in der Datei vorhanden sein:
+
+- user_login
+
+- mykis-name
+
+Die Groß & Kleinschreibung ist egal.
+
+Folgendes Bild zeigt eine Beispiel Datei:
+
+![](C:\Users\Julian%20Grausgruber\AppData\Roaming\marktext\images\2026-05-18-12-10-39-image.png)
+
+Desweiteren kann für die Namenszuordnung noch eine Option ausgewählt werden:
+
+![](C:\Users\Julian%20Grausgruber\AppData\Roaming\marktext\images\2026-05-18-12-15-03-image.png)
+
+Standardmäßig ist die Option ausgeschaltet und dabei wird die automatische Namenskonvertierung auch noch durchgeführt (Name wird erstellt aus dem user_login oder user_name. Jedoch hat die Namenszuordnung immer die höhere Priorität, solange ein Eintrag vorhanden ist, wird dieser für das Feld "Erfasser" gewählt. 
+
+Bei Aktivierung dieser Option, wird in das Feld "Erfasser" der user_login geschrieben, solange kein Eintrag in der Namenszuordnungs - Liste vorhanden ist.
+
 ## 5. Log
 
 Das Programm erzeugt bei jeder Konvertierung ein Log Datei mit einem Datum, diese kann verwendet werden um noch genauere Details über die Fundortzurodnung zu bekommen.
@@ -415,19 +457,29 @@ Vor jedem Anhängen, ein Backup (Eine Kopie) von der Original Datei machen.
 
 ## 8 Versions-Historie
 
+#### v0.10.0 (2026-05-18)
+
+- Auf das Mykis Feld "Qualität" wird jetzt "sequenziert" geschrieben, wenn etwas in den iNaturalist Felder  "field:mykis-its-sequenz" , "field:dna barcode its:" steht
+
+- Namenkonvertierungsdatei: user_login wird konvertiert zu mykis-name
+
+- Option "Erfasser = user_login": Neue Checkbox übernimmt den user_login unverändert als Erfasser. Einträge aus der Namenskonvertierungs-Datei werden weiterhin angewendet.
+
+- Koordinaten-Normalisierung: Ganzzahlige Koordinaten ohne Dezimaltrennzeichen werden automatisch korrekt geparst (z.B. "51232" → 51.232). Erkennung erfolgt automatisch anhand der ersten Ziffer (Deutschland: Breite 47–55°N, Länge 6–15°O).
+
+- Wirtsnamen:  Gattungsnamen werden automatisch mit "sp." ergänzt (z.B. "Quercus" → "Quercus sp.").
+
 #### v0.9.0 (2026-04-13)
 
 - Auf das Mykis -Feld Foto_Zeichnung wird jetzt "iNNr: + INaturlist ID" geschrieben z.b: iNNr:260724269
 - Auf das Mykis -Feld art_bemerkung wird jetzt das iNaturalist Feld: field:mykis-bemerkung kopiert
 - Auf das Mykis -Feld Ungenauigkeit wird jetzt das iNaturalist Feld: positional_accuracy kopiert
 - bugfix log File
-  -  Fundort ID Anzeige bei Fehler
-  -  Fundort ID Anzeige, wenn Referenz Fundort keine Geokoordinaten haben
+  - Fundort ID Anzeige bei Fehler
+  - Fundort ID Anzeige, wenn Referenz Fundort keine Geokoordinaten haben
 - bugfix Feld ART --> es wurde bisher nur das zweite Wort als Art verwendet 
-  - alt: Fuligo	septica rufa --> septica	
-  - jetzt: Fuligo	septica rufa --> septica rufa
-  
-
+  - alt: Fuligo    septica rufa --> septica    
+  - jetzt: Fuligo    septica rufa --> septica rufa
 
 #### v0.8.0 (2026-03-26)
 
@@ -514,4 +566,3 @@ Vor jedem Anhängen, ein Backup (Eine Kopie) von der Original Datei machen.
 - Koordinaten-Export
 
 ---
-

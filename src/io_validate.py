@@ -179,6 +179,15 @@ def _save_xls_with_xlwt(
     workbook = xlwt.Workbook(encoding="utf-8")
     worksheet = workbook.add_sheet("Sheet1")
 
+    # Style für MTB-Spalte (Zahl mit Dezimalkomma)
+    style_mtb = xlwt.XFStyle()
+    style_mtb.num_format_str = '0.000'
+
+    # MTB-Spaltenindex ermitteln (None wenn nicht vorhanden)
+    mtb_col_idx = (
+        list(df.columns).index("MTB") if "MTB" in df.columns else None
+    )
+
     # Schreibe Spaltennamen
     for col_idx, col_name in enumerate(df.columns):
         worksheet.write(0, col_idx, str(col_name))
@@ -193,8 +202,11 @@ def _save_xls_with_xlwt(
             elif not isinstance(value, (str, int, float, bool)):
                 value = str(value)
 
-            worksheet.write(row_idx, col_idx, value)
-
+            # MTB-Spalte: als Zahl mit deutschem Dezimalformat schreiben
+            if col_idx == mtb_col_idx and isinstance(value, float):
+                worksheet.write(row_idx, col_idx, value, style_mtb)
+            else:
+                worksheet.write(row_idx, col_idx, value)
     # Speichere
     workbook.save(str(path))
     log(f"✅ Gespeichert als echtes .xls (mit xlwt direkt): {path.name}")

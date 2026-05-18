@@ -89,6 +89,8 @@ class App(tk.Tk):
         self.var_output = tk.StringVar()
         self.var_enable_append = tk.BooleanVar(value=False)
         self.var_ref = tk.StringVar()
+        self.var_name_ref = tk.StringVar()
+        self.var_use_login_as_erfasser = tk.BooleanVar(value=False)
 
         # GUI aufbauen
         self._build_ui()
@@ -140,7 +142,7 @@ class App(tk.Tk):
         # -----------------------------------------------------------------
         # Referenzdatei
         # -----------------------------------------------------------------
-        ttk.Label(frm, text="Referenz - Liste von bereits vorhandener Fundorte").grid(
+        ttk.Label(frm, text="Fundortreferenz - Liste").grid(
             row=4, column=0, sticky="w", **pad
         )
 
@@ -156,11 +158,30 @@ class App(tk.Tk):
         )
 
         # -----------------------------------------------------------------
+        # Namenskonvertierungs-Datei
+        # -----------------------------------------------------------------
+        ttk.Label(frm, text="Namenszuordnungs - Liste (user_login → mykis-name):").grid(
+            row=6, column=0, sticky="w", **pad
+        )
+
+        row_name_ref = ttk.Frame(frm)
+        row_name_ref.grid(row=7, column=0, sticky="ew", **pad)
+
+        ttk.Entry(row_name_ref, textvariable=self.var_name_ref).pack(
+            side="left", fill="x", expand=True
+        )
+        ttk.Button(row_name_ref, text="Durchsuchen…", command=self.pick_name_ref).pack(
+            side="left", padx=6
+        )
+        ttk.Button(row_name_ref, text="✕", width=3, command=lambda: self.var_name_ref.set("")).pack(
+            side="left"
+        )
+
+        # -----------------------------------------------------------------
         # Optionen: An bestehende Datei anhängen
         # -----------------------------------------------------------------
         box = ttk.LabelFrame(frm, text="Optionen")
-        box.grid(row=6, column=0, sticky="ew", **pad)
-
+        box.grid(row=8, column=0, sticky="ew", **pad)
         ttk.Checkbutton(
             box,
             text="An bestehende Mykis-Datei anhängen (Ausgabedatei = Anhänge-Datei)",
@@ -168,11 +189,17 @@ class App(tk.Tk):
             command=self._toggle_append_mode,
         ).pack(anchor="w", padx=8, pady=6)
 
+        ttk.Checkbutton(
+            box,
+            text="Erfasser = user_login (Ausnahme: Einträge aus Namenszuordnungs - Liste)",
+            variable=self.var_use_login_as_erfasser,
+        ).pack(anchor="w", padx=8, pady=(0, 6))
+
         # -----------------------------------------------------------------
         # Buttons
         # -----------------------------------------------------------------
         row_btn = ttk.Frame(frm)
-        row_btn.grid(row=7, column=0, sticky="e", **pad)
+        row_btn.grid(row=9, column=0, sticky="e", **pad)
         ttk.Button(
             row_btn,
             text="Konvertieren",
@@ -183,18 +210,18 @@ class App(tk.Tk):
         # -----------------------------------------------------------------
         # Protokoll (Log-Fenster)
         # -----------------------------------------------------------------
-        ttk.Label(frm, text="Protokoll:").grid(row=8, column=0, sticky="w", **pad)
+        ttk.Label(frm, text="Protokoll:").grid(row=10, column=0, sticky="w", **pad)
 
         self.txt = tk.Text(frm, height=15, wrap="word", font=("Consolas", 9))
-        self.txt.grid(row=9, column=0, sticky="nsew", padx=10, pady=(0, 10))
+        self.txt.grid(row=11, column=0, sticky="nsew", padx=10, pady=(0, 10))
 
         yscroll = ttk.Scrollbar(frm, orient="vertical", command=self.txt.yview)
         self.txt.configure(yscrollcommand=yscroll.set)
-        yscroll.grid(row=9, column=1, sticky="ns", pady=(0, 10))
+        yscroll.grid(row=11, column=1, sticky="ns", pady=(0, 10))
 
         # Grid-Gewichte
         frm.columnconfigure(0, weight=1)
-        frm.rowconfigure(9, weight=1)
+        frm.rowconfigure(11, weight=1)
 
     # -------------------------------------------------------------------------
     # Logging
@@ -255,6 +282,20 @@ class App(tk.Tk):
         if p:
             self.var_output.set(p)
 
+    def pick_name_ref(self) -> None:
+        """Dialog für optionale Namenskonvertierungs-Datei."""
+        p = filedialog.askopenfilename(
+            title="Namenskonvertierungs-Datei wählen",
+            filetypes=[
+                ("Tabellen", "*.csv *.xlsx *.xls"),
+                ("CSV", "*.csv"),
+                ("Excel", "*.xlsx *.xls"),
+                ("Alle Dateien", "*.*"),
+            ],
+        )
+        if p:
+            self.var_name_ref.set(p)
+
     def pick_ref(self) -> None:
         """Dialog für optionale Referenzdatei."""
         p = filedialog.askopenfilename(
@@ -309,6 +350,8 @@ class App(tk.Tk):
         inp = self.var_input.get().strip()
         out = self.var_output.get().strip()
         ref = self.var_ref.get().strip() or None
+        name_ref = self.var_name_ref.get().strip() or None
+        use_login_as_erfasser = bool(self.var_use_login_as_erfasser.get())
         enable_append = bool(self.var_enable_append.get())
 
         # Validierung
@@ -329,7 +372,7 @@ class App(tk.Tk):
         # Thread starten (damit GUI nicht einfriert)
         threading.Thread(
             target=self._convert_worker,
-            args=(Path(inp), Path(out), enable_append, Path(ref) if ref else None),
+            args=(Path(inp), Path(out), enable_append, Path(ref) if ref else None, Path(name_ref) if name_ref else None, use_login_as_erfasser),
             daemon=True,
         ).start()
 
@@ -339,6 +382,8 @@ class App(tk.Tk):
         out: Path,
         enable_append: bool,
         ref: Path | None = None,
+        name_ref: Path | None = None,
+        use_login_as_erfasser: bool = False,
     ) -> None:
         """
         Führt Konvertierung durch (läuft in separatem Thread).
@@ -413,6 +458,8 @@ class App(tk.Tk):
                 template_path=str(template),
                 template_sheet=self.cfg.template_sheet,
                 mtb_reference_path=str(ref),
+                name_ref_path=str(name_ref) if name_ref else None,
+                use_login_as_erfasser=use_login_as_erfasser,
                 log_func=self.log,
                 log_file_func=log_to_file,
             )

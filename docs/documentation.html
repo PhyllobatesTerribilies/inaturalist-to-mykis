@@ -1249,7 +1249,7 @@ pre[class*="language-"] {
 </head>
 <body>
   <article class="markdown-body"><h1 class="atx" id="dokumentation--inaturalist-to-mykis">Dokumentation – inaturalist-to-mykis</h1>
-<p><strong>Version:</strong> 0.9.0<br><strong>Datum:</strong> 2026-04-13</p>
+<p><strong>Version:</strong> 0.10.0<br><strong>Datum:</strong> 2026-05-18</p>
 <hr>
 <h2 class="atx" id="1-einleitung">1. Einleitung</h2>
 <p>Das Programm inaturalist-to-mykis konvertiert Pilzbeobachtungen von iNaturalist in ein Format, das direkt in MykIS importiert werden kann. Dabei werden vordefinierte Spalten einer exportierten iNaturalist-Datei in das kompatible MykIS-Dateiformat überführt.</p>
@@ -1274,12 +1274,13 @@ Layout: Die verwendete Vorlage für das Programm findet man unter <a href="https
 <pre><code class="fenced-code-block">Doppelklick auf: inaturalist-to-mykis.exe</code></pre>
 <h3 class="atx" id="22-hauptfenster">2.2 Hauptfenster</h3>
 <p>Nach dem ausführen des Programms öffnet sich folgendes Fenster:</p>
-<p><img alt="" src="file:///C:/Users/Julian%20Grausgruber/AppData/Roaming/marktext/images/2026-03-15-18-02-35-image.png"><strong>Legende:</strong></p>
+<p><img alt="" src="file:///C:/Users/Julian%20Grausgruber/AppData/Roaming/marktext/images/2026-05-18-12-04-38-image.png"><strong>Legende:</strong></p>
 <ul>
 <li>GRÜN <strong>Eingabefeld:</strong> iNaturalist-Exportdatei</li>
 <li>ROT <strong>Ausgabefeld:</strong> Konvertierte Datei bzw bestehende Datei (mykdate.xls)</li>
-<li>ROSA <strong>Fundort Zuordnungs Liste:</strong> Liste bestehender Fundort zur Fundortzurodnung bei neuen Datensätzen</li>
-<li>GELB <strong>Optionen:</strong> Auswahloption, ob die neuen Datensätze an einen bestehende Datei angehängt werden soll</li>
+<li>ROSA <strong>Fundortrefernz Liste:</strong> Liste bestehender Fundort zur Fundortzurodnung bei neuen Datensätzen</li>
+<li>SCHWARZ <strong>Namenszurodnungs Liste:</strong> List mit user_login und Mykisnamen</li>
+<li>GELB <strong>Optionen:</strong> Auswahloption,</li>
 <li>BLAU <strong>Protokoll:</strong> Live-Status und Meldungen</li>
 </ul>
 <h2 class="atx" id="3-bedienung">3. Bedienung</h2>
@@ -1391,7 +1392,7 @@ INFO: Tabelle eingelesen
 <li>Alte Zeilen: neue Spalten bleiben leer</li>
 </ul>
 <hr>
-<h3 class="atx" id="33-fundortzurodnung">3.3 Fundortzurodnung</h3>
+<h3 class="atx" id="33-fundortzuordnung">3.3 Fundortzuordnung</h3>
 <p><strong>Schritt 1:</strong> Eingabedatei und Ausgabedatei wählen </p>
 <ul>
 <li>Die beiden Datein wie in den vorheringen Punkten auswählen, je nach dem ob man einen Datei erstellen oder an einen bestehende Datei anhängen möchte</li>
@@ -1404,6 +1405,22 @@ INFO: Tabelle eingelesen
 <ul>
 <li>Die neuen Datensätze werden jetzt mit der Referenz Fundortliste überprüft. Bei Übereinstimmung mit den 16tel Quadranten, werden vordefinierte Spalten des Refernzdatensatzes auf den neuen Datensatz kopiert.</li>
 <li>Mehr Information zu der Fundortzurordnung findest man hier. <a href="#44-fundort-zurodnung">Fundortzurordnung</a></li>
+</ul>
+<h2 class="atx" id="34-namenszuordnung">3.4 Namenszuordnung</h2>
+<p><strong>Schritt 1:</strong> Eingabedatei und Ausgabedatei wählen</p>
+<ul>
+<li>Die beiden Datein wie in den vorheringen Punkten auswählen, je nach dem ob man einen Datei erstellen oder an einen bestehende Datei anhängen möchte</li>
+</ul>
+<p><strong>Schritt 2:</strong> Namenszurodnungs Liste auswählen</p>
+<ul>
+<li><p>Achtung Liste muss mindestens die Spalten "user_login" und "mykis-namen" haben. Die Spaltennamen muss exakt sein (Groß &amp; Kleinschreibung ist egal)</p>
+<p><img alt="" src="file:///C:/Users/Julian%20Grausgruber/AppData/Roaming/marktext/images/2026-05-18-12-10-39-image.png"></p>
+</li>
+</ul>
+<p><strong>Schritt 2:</strong> Konvertieren</p>
+<ul>
+<li>Die neuen Datensätze werden jetzt mit der Namenszurodnungs Liste überprüft. Bei Übereinstimmung mit einem user_login, wird der Mykis Name in den neuen Datensatz im Feld "Erfasser" eingetragen</li>
+<li>Mehr Information zu der Namenszurordnung findest man hier <a href="#45-namenszuordnung">Namenzurordnung</a>. </li>
 </ul>
 <h2 class="atx" id="4-spalten-mapping-inaturalist-→-mykis">4. Spalten-Mapping: iNaturalist → Mykis</h2>
 <h3 class="atx" id="41-ubersicht-der-spalten">4.1 Übersicht der Spalten</h3>
@@ -1617,6 +1634,22 @@ Wenn es mehrere bestehende Fundort in der Fundort Zuordnungs Liste vorhanden sin
 <li>zonalitaet</li>
 </ul>
 <p>Die originalen Geokoordianten des neuen Fundortes werden auch gelöscht.</p>
+<h3 class="atx" id="45-namenszuordnung">4.5 Namenszuordnung</h3>
+<p>Die Namenszurodnung ist nur aktiv, solange eine Datei als Namenszuodrnungs Liste hinterlegt ist.</p>
+<p>Folgende Spalten muss in der Datei vorhanden sein:</p>
+<ul>
+<li><p>user_login</p>
+</li>
+<li><p>mykis-name</p>
+</li>
+</ul>
+<p>Die Groß &amp; Kleinschreibung ist egal.</p>
+<p>Folgendes Bild zeigt eine Beispiel Datei:</p>
+<p><img alt="" src="file:///C:/Users/Julian%20Grausgruber/AppData/Roaming/marktext/images/2026-05-18-12-10-39-image.png"></p>
+<p>Desweiteren kann für die Namenszuordnung noch eine Option ausgewählt werden:</p>
+<p><img alt="" src="file:///C:/Users/Julian%20Grausgruber/AppData/Roaming/marktext/images/2026-05-18-12-15-03-image.png"></p>
+<p>Standardmäßig ist die Option ausgeschaltet und dabei wird die automatische Namenskonvertierung auch noch durchgeführt (Name wird erstellt aus dem user_login oder user_name. Jedoch hat die Namenszuordnung immer die höhere Priorität, solange ein Eintrag vorhanden ist, wird dieser für das Feld "Erfasser" gewählt. </p>
+<p>Bei Aktivierung dieser Option, wird in das Feld "Erfasser" der user_login geschrieben, solange kein Eintrag in der Namenszuordnungs - Liste vorhanden ist.</p>
 <h2 class="atx" id="5-log">5. Log</h2>
 <p>Das Programm erzeugt bei jeder Konvertierung ein Log Datei mit einem Datum, diese kann verwendet werden um noch genauere Details über die Fundortzurodnung zu bekommen.
 Es wird Details über die Referenz Fundort Datei ausgegeben wie z.b: Anzahl an Refernz Datensätze oder auch die "mtb" Spalte gefunden wurde oder auch wie viele verschiede 16tel Quadranten es gibt. 
@@ -1689,6 +1722,19 @@ Zurzeit werden folgeden Felder in der Konvertierung verwendet:</p>
 </ol>
 <hr>
 <h2 class="atx" id="8-versions-historie">8 Versions-Historie</h2>
+<h4 class="atx" id="v0100-2026-05-18">v0.10.0 (2026-05-18)</h4>
+<ul>
+<li><p>Auf das Mykis Feld "Qualität" wird jetzt "sequenziert" geschrieben, wenn etwas in den iNaturalist Felder &nbsp;"field:mykis-its-sequenz" , "field:dna barcode its:" steht</p>
+</li>
+<li><p>Namenkonvertierungsdatei: user_login wird konvertiert zu mykis-name</p>
+</li>
+<li><p>Option "Erfasser = user_login": Neue Checkbox übernimmt den user_login unverändert als Erfasser. Einträge aus der Namenskonvertierungs-Datei werden weiterhin angewendet.</p>
+</li>
+<li><p>Koordinaten-Normalisierung: Ganzzahlige Koordinaten ohne Dezimaltrennzeichen werden automatisch korrekt geparst (z.B. "51232" → 51.232). Erkennung erfolgt automatisch anhand der ersten Ziffer (Deutschland: Breite 47–55°N, Länge 6–15°O).</p>
+</li>
+<li><p>Wirtsnamen:  Gattungsnamen werden automatisch mit "sp." ergänzt (z.B. "Quercus" → "Quercus sp.").</p>
+</li>
+</ul>
 <h4 class="atx" id="v090-2026-04-13">v0.9.0 (2026-04-13)</h4>
 <ul>
 <li>Auf das Mykis -Feld Foto_Zeichnung wird jetzt "iNNr: + INaturlist ID" geschrieben z.b: iNNr:260724269</li>

@@ -64,6 +64,32 @@ def copy_numeric_column(df: pd.DataFrame, column: str) -> pd.Series:
     return pd.to_numeric(df[column], errors="coerce")
 
 
+def build_name_lookup(name_ref_df: pd.DataFrame) -> dict[str, str]:
+    """
+    Erstellt Lookup-Dictionary aus Namenskonvertierungs-Datei.
+
+    Erwartet Spalten: user_login, mykis-name (Groß-/Kleinschreibung egal)
+
+    Returns:
+        Dict: user_login → klarname
+    """
+    cols = {c.lower().strip(): c for c in name_ref_df.columns}
+    login_col = cols.get("user_login")
+    klarname_col = cols.get("mykis-name")
+
+    if login_col is None or klarname_col is None:
+        print("⚠️  WARNUNG: Namenskonvertierungs-Datei braucht Spalten 'user_login' und 'mykis-name'")
+        return {}
+
+    lookup: dict[str, str] = {}
+    for _, row in name_ref_df.iterrows():
+        login = str(row[login_col]).strip()
+        klarname = str(row[klarname_col]).strip()
+        if login and klarname and login != "nan" and klarname != "nan":
+            lookup[login] = klarname
+    return lookup
+
+
 def assign_if_exists(out_df: pd.DataFrame, column: str, series: pd.Series) -> None:
     """Weist Serie einer Spalte zu (nur wenn Spalte im Template existiert)."""
     if column in out_df.columns:
@@ -554,6 +580,57 @@ def convert_location_to_mtbq64(
     return df
 
 
+def parse_coord_no_separator(df: pd.DataFrame, log_file_func: Callable[[str], None]) -> pd.DataFrame:
+    """
+    Wandelt ostwert2/nordwert2 ohne Dezimaltrennzeichen in Floats um.
+
+    Deutschland: Breite 47–55°N, Länge 6–15°O
+
+    Erste Ziffer ≥ 6  → Längengrad  6– 9° → Komma nach 1. Stelle: "7232"  →  7.232
+    Erste Ziffer < 6  → Breiten- oder Längengrad 10–15° → Komma nach 2. Stelle:
+                        "51232" → 51.232  |  "13232" → 13.232
+
+    Bereits formatierte Werte ("51,232" / "51.232") werden direkt geparst.
+    Log nur bei tatsächlicher Änderung.
+    """
+    for idx, row in df.iterrows():
+        ergebnisse: dict[str, float | None] = {}
+        geaendert: dict[str, tuple[Any, float | None]] = {}
+
+        for spalte in ("ostwert2", "nordwert2"):
+            value = row.get(spalte)
+
+            if pd.isna(value) or value is None:
+                ergebnisse[spalte] = None
+                continue
+
+            s = str(value).strip().replace(",", ".")
+
+            # ganzzahlige Floats bereinigen: "52134.0" → "52134"
+            if s.endswith(".0"):
+                s = s[:-2]
+
+            if "." not in s:
+                s = s[:1] + "." + s[1:] if int(s[0]) >= 6 else s[:2] + "." + s[2:]
+
+            try:
+                result = float(s)
+                ergebnisse[spalte] = result
+                if result != value:
+                    geaendert[spalte] = (value, result)
+            except ValueError:
+                log_file_func(f"parse_coord[{idx}]: Konvertierung fehlgeschlagen '{value}' → None")
+                ergebnisse[spalte] = None
+
+        if geaendert:
+            teile = ", ".join(f"{s}: '{alt}' → {neu}" for s, (alt, neu) in geaendert.items())
+            log_file_func(f"parse_coord[{idx}]: {teile}")
+
+        for spalte, wert in ergebnisse.items():
+            df.at[idx, spalte] = wert
+
+    return df
+
 # ==============================================================================
 # MAIN MAPPING FUNCTION
 # ==============================================================================
@@ -565,6 +642,8 @@ def map_inat_to_mykis(
     template_path: str | None = None,
     template_sheet: int = 0,
     mtb_reference_path: str | None = None,
+    name_ref_path: str | None = None,
+    use_login_as_erfasser: bool = False,
     log_func: Optional[Callable[[str], None]] = None,
 ) -> pd.DataFrame:
     """
@@ -655,6 +734,29 @@ def map_inat_to_mykis(
     # PERSONEN (Basis - wird durch Custom Fields überschrieben)
     # -------------------------------------------------------------------------
     names_series = df_in.apply(pick_name, axis=1)
+
+    # Option: user_login direkt als Erfasser übernehmen
+    if use_login_as_erfasser:
+        names_series = copy_column(df_in, "user_login")
+        log("ℹ️  Erfasser: user_login wird unverändert übernommen")
+
+    # Namenskonvertierung via Referenzdatei (user_login → mykis-name)
+    if name_ref_path and Path(name_ref_path).is_file():
+        name_ref_df = read_any_table(Path(name_ref_path))
+        name_lookup = build_name_lookup(name_ref_df)
+        if name_lookup:
+            login_series = copy_column(df_in, "user_login")
+            lookup_result = login_series.map(name_lookup)
+            # Lookup-Ergebnis hat Vorrang, Fallback auf pick_name
+            names_series = lookup_result.where(
+                lookup_result.notna() & (lookup_result != "nan") & (lookup_result != ""),
+                names_series,
+            )
+            log(f"✅ Namenskonvertierung: {name_lookup.__len__()} Einträge, {lookup_result.notna().sum()} Treffer")
+            log_file_func(f"Namenskonvertierung geladen: {name_ref_path}, {len(name_lookup)} Einträge")
+    elif name_ref_path:
+        log(f"⚠️  Namenskonvertierungs-Datei nicht gefunden: {name_ref_path}")
+
     assign_if_exists(out_df, "erfasser", names_series)
 
     # -------------------------------------------------------------------------
@@ -703,6 +805,7 @@ def map_inat_to_mykis(
     # -------------------------------------------------------------------------
     assign_if_exists(out_df, "nordwert2", copy_numeric_column(df_in, "latitude"))
     assign_if_exists(out_df, "ostwert2", copy_numeric_column(df_in, "longitude"))
+    out_df = parse_coord_no_separator(out_df, log_file_func)
 
     # assign_if_exists(out_df, "Foto_Zeichnung", pd.Series("D", index=df_in.index))
     id_col = copy_column(df_in, "id")      
@@ -735,7 +838,13 @@ def map_inat_to_mykis(
         out_df, "sonderstandort", copy_column(df_in, "field:mykis-pflanzengesellschaft")
     )
 
-    assign_if_exists(out_df, "Wirt", copy_column(df_in, "field:mykis-substrat/-wirt"))
+    #assign_if_exists(out_df, "Wirt", copy_column(df_in, "field:mykis-substrat/-wirt"))
+    wirt_col = copy_column(df_in, "field:mykis-substrat/-wirt")
+    if wirt_col is not None:
+        wirt_col = wirt_col.str.strip()
+        ist_gattung = wirt_col.notna() & (wirt_col != "") & ~wirt_col.str.contains(" ")
+        wirt_col = wirt_col.where(~ist_gattung, wirt_col + " sp.")
+    assign_if_exists(out_df, "Wirt", wirt_col)
 
     # Sammler/Bestimmer: Custom Fields haben Vorrang vor user_name
     mykis_leg = copy_column(df_in, "field:mykis-leg.")
@@ -747,9 +856,27 @@ def map_inat_to_mykis(
     assign_if_exists(out_df, "sammler", sammler_final)
     assign_if_exists(out_df, "bestimmer", bestimmer_final)
 
+    quality_column = "Qualität"
+    sequenz_col = copy_column(df_in, "field:mykis-its-sequenz")
+    dna_col = copy_column(df_in, "field:dna barcode its:")
+    if quality_column in out_df.columns:
+        hat_sequenz = pd.Series(False, index=df_in.index)  # Startwert: alles False
+        if sequenz_col is not None:
+            hat_sequenz |= sequenz_col.notna() & (sequenz_col.str.strip() != "")
+        if dna_col is not None:
+            hat_sequenz |= dna_col.notna() & (dna_col.str.strip() != "")
+        out_df[quality_column] = hat_sequenz.map({True: "sequenziert", False: ""})
+
     out_df = convert_location_to_mtbq64(
         out_df, mtb_referenc_df, log_file_func=log_file_func
     )
+
+    # In out_df als Float speichern (intern immer Punkt):
+    if "MTB" in out_df.columns:
+        out_df["MTB"] = pd.to_numeric(
+            out_df["MTB"].astype(str).str.replace(",", "."),
+            errors="coerce"
+        )
 
     # Bemerkungen
     # assign_if_exists(
