@@ -838,11 +838,39 @@ def map_inat_to_mykis(
         out_df, "sonderstandort", copy_column(df_in, "field:mykis-pflanzengesellschaft")
     )
 
-    #assign_if_exists(out_df, "Wirt", copy_column(df_in, "field:mykis-substrat/-wirt"))
+    WIRT_UEBERSETZUNGEN = {
+        "angiospermae": "LAUBHOLZ/LAUBBAUM",
+        "pinopsida": "NADELHOLZ/NADELBAUM",
+        "gliridae":"Bilch",
+        "harmonia axyridis" : "Asiatischer Marienkäfer",
+        "capreolus capreolus" : "Reh",
+        "castoridae" : "Biber",
+        "dama dama" : "Damwild",
+        "carnivore" : "Fleischfresser",
+        "bos taurus" : "Hausrind",
+        "Sus scrofa" : "Wildschwein",
+        "sus scrofa domestica" : "Hausschwein",
+        "capra aegagrus hircus" : "Hausziege",
+        "canis lupus familiaris" : "Hund, Haushund",
+        "coleoptera" : "KÄFER",
+        "coccinellidae" : "MARIENKÄFER",
+        "ovis orientalis" : "Mufflon",
+        "equus caballus" : "Pferd",
+        "vulpes vulpes" : "Rotfuchs",
+        "cervus elaphus" : "Rothirsch",
+        "lepidoptera" : "SCHMETTERLINGE",
+        "heteroptera" : "WANZEN",
+        "bubalus arnee" : "Wasserbüffel",
+        "oryctolagus cuniculus" : "Wildkaninchen",
+    }
+
     wirt_col = copy_column(df_in, "field:mykis-substrat/-wirt")
     if wirt_col is not None:
         wirt_col = wirt_col.str.strip()
-        ist_gattung = wirt_col.notna() & (wirt_col != "") & ~wirt_col.str.contains(" ")
+        wirt_lower = wirt_col.str.lower()
+        wurde_uebersetzt = wirt_lower.isin(WIRT_UEBERSETZUNGEN)
+        wirt_col = wirt_col.where(~wurde_uebersetzt, wirt_lower.map(WIRT_UEBERSETZUNGEN))
+        ist_gattung = wirt_col.notna() & (wirt_col != "") & ~wirt_col.str.contains(" ") & ~wurde_uebersetzt
         wirt_col = wirt_col.where(~ist_gattung, wirt_col + " sp.")
     assign_if_exists(out_df, "Wirt", wirt_col)
 

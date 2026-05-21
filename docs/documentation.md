@@ -362,6 +362,44 @@ Standardmäßig ist die Option ausgeschaltet und dabei wird die automatische Nam
 
 Bei Aktivierung dieser Option, wird in das Feld "Erfasser" der user_login geschrieben, solange kein Eintrag in der Namenszuordnungs - Liste vorhanden ist.
 
+
+
+###### 4.5 Wirt
+
+Das Feld **Wirt** wird aus der iNaturalist-Spalte `field:mykis-substrat/-wirt` übernommen. 
+
+Bekannte lateinische Begriffe (Gattungen, Arten, höhere Taxa) werden automatisch in deutsche Bezeichnungen (Mykis) übersetzt – unabhängig von der Groß-/Kleinschreibung im Original. 
+
+Beispiele: `Angiospermae` → `LAUBHOLZ/LAUBBAUM`, `Cervus elaphus` → `Rothirsch`.
+
+ Einträge, die nach der Übersetzung noch immer ein einzelnes Wort ohne Leerzeichen sind (d. h. nur ein Gattungsname, keine Art), erhalten automatisch den Zusatz **` sp.`** (z. B. `Quercus` → `Quercus sp.`). Bereits übersetzte Werte sind davon ausgenommen.
+
+| Lateinisch             | Deutsch                 |
+| ---------------------- | ----------------------- |
+| Angiospermae           | LAUBHOLZ/LAUBBAUM       |
+| Pinopsida              | NADELHOLZ/NADELBAUM     |
+| Gliridae               | Bilch                   |
+| Harmonia axyridis      | Asiatischer Marienkäfer |
+| Capreolus capreolus    | Reh                     |
+| Castoridae             | Biber                   |
+| Dama dama              | Damwild                 |
+| Carnivore              | Fleischfresser          |
+| Bos taurus             | Hausrind                |
+| Sus scrofa             | Wildschwein             |
+| Sus scrofa domestica   | Hausschwein             |
+| Capra aegagrus hircus  | Hausziege               |
+| Canis lupus familiaris | Hund, Haushund          |
+| Coleoptera             | KÄFER                   |
+| Coccinellidae          | MARIENKÄFER             |
+| Ovis orientalis        | Mufflon                 |
+| Equus caballus         | Pferd                   |
+| Vulpes vulpes          | Rotfuchs                |
+| Cervus elaphus         | Rothirsch               |
+| Lepidoptera            | SCHMETTERLINGE          |
+| Heteroptera            | WANZEN                  |
+| Bubalus arnee          | Wasserbüffel            |
+| Oryctolagus cuniculus  | Wildkaninchen           |
+
 ## 5. Log
 
 Das Programm erzeugt bei jeder Konvertierung ein Log Datei mit einem Datum, diese kann verwendet werden um noch genauere Details über die Fundortzurodnung zu bekommen.
@@ -456,6 +494,10 @@ Vor jedem Anhängen, ein Backup (Eine Kopie) von der Original Datei machen.
 ---
 
 ## 8 Versions-Historie
+
+### v0.11.0 (2026-05-21)
+
+- Wirt: Übersetzung taxonomischer Begriffe (z. B. „Angiospermae" → „LAUBHOLZ/LAUBBAUM")
 
 #### v0.10.0 (2026-05-18)
 
