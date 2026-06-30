@@ -400,6 +400,24 @@ Beispiele: `Angiospermae` → `LAUBHOLZ/LAUBBAUM`, `Cervus elaphus` → `Rothirs
 | Bubalus arnee          | Wasserbüffel            |
 | Oryctolagus cuniculus  | Wildkaninchen           |
 
+###### 4.5 Qualität 
+Das Feld `field:mykis-qualität` aus dem iNaturalist-Export wird über folgende Tabelle in die Mykis-Qualitäts-ID umgewandelt:
+
+| iNaturalist-Wert               | Mykis-ID |
+|--------------------------------|----------|
+| unsicher                       | 1        |
+| mikroskopiert                  | 2        |
+| gesichert                      | 4        |
+| plausibel                      | 5        |
+| Literaturdaten                 | 6        |
+| sequenziert                    | 7        |
+| mikroskopiert + sequenziert    | 8        |
+
+**Fallback:** Ist `field:mykis-qualität` leer, aber `field:mykis-its-sequenz` oder `field:dna barcode its:` gefüllt, wird automatisch ID `7` (sequenziert) gesetzt.
+
+**Unbekannte Werte:** Steht ein nicht gelisteter Text im Feld (z. B. Tippfehler), bleibt die Zelle leer und es wird eine Zeile ins Log geschrieben (`Qualität[idx]: unbekannter Wert '...' wird ignoriert`).
+
+
 ## 5. Log
 
 Das Programm erzeugt bei jeder Konvertierung ein Log Datei mit einem Datum, diese kann verwendet werden um noch genauere Details über die Fundortzurodnung zu bekommen.
@@ -494,6 +512,10 @@ Vor jedem Anhängen, ein Backup (Eine Kopie) von der Original Datei machen.
 ---
 
 ## 8 Versions-Historie
+
+### v0.12.0 (2026-07-01)
+- bugfix: Übersetzung "sus scrofa" : "Wildschwein"
+- field:mykis-qualität das Feld gelesen und mit einer Mapping Tabelle umgewandelt (z.b: unsicher --> 1) und auf das Feld Qualität geschrieben
 
 ### v0.11.0 (2026-05-21)
 

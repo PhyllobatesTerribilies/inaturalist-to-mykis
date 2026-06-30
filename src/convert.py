@@ -848,7 +848,7 @@ def map_inat_to_mykis(
         "dama dama" : "Damwild",
         "carnivore" : "Fleischfresser",
         "bos taurus" : "Hausrind",
-        "Sus scrofa" : "Wildschwein",
+        "sus scrofa" : "Wildschwein",
         "sus scrofa domestica" : "Hausschwein",
         "capra aegagrus hircus" : "Hausziege",
         "canis lupus familiaris" : "Hund, Haushund",
@@ -874,6 +874,9 @@ def map_inat_to_mykis(
         wirt_col = wirt_col.where(~ist_gattung, wirt_col + " sp.")
     assign_if_exists(out_df, "Wirt", wirt_col)
 
+
+
+
     # Sammler/Bestimmer: Custom Fields haben Vorrang vor user_name
     mykis_leg = copy_column(df_in, "field:mykis-leg.")
     mykis_det = copy_column(df_in, "field:mykis-det.")
@@ -884,16 +887,36 @@ def map_inat_to_mykis(
     assign_if_exists(out_df, "sammler", sammler_final)
     assign_if_exists(out_df, "bestimmer", bestimmer_final)
 
+    QUALITAET_IDS = {
+        "unsicher": "1",
+        "mikroskopiert": "2",
+        "gesichert": "4",
+        "plausibel": "5",
+        "literaturdaten": "6",
+        "sequenziert": "7",
+        "mikroskopiert + sequenziert": "8",
+    }
+
     quality_column = "Qualität"
-    sequenz_col = copy_column(df_in, "field:mykis-its-sequenz")
-    dna_col = copy_column(df_in, "field:dna barcode its:")
     if quality_column in out_df.columns:
-        hat_sequenz = pd.Series(False, index=df_in.index)  # Startwert: alles False
-        if sequenz_col is not None:
-            hat_sequenz |= sequenz_col.notna() & (sequenz_col.str.strip() != "")
-        if dna_col is not None:
-            hat_sequenz |= dna_col.notna() & (dna_col.str.strip() != "")
-        out_df[quality_column] = hat_sequenz.map({True: "sequenziert", False: ""})
+        qualitaet_text = copy_column(df_in, "field:mykis-qualität")
+        qualitaet_normalisiert = qualitaet_text.str.strip().str.lower()
+        qualitaet_id = qualitaet_normalisiert.map(QUALITAET_IDS).fillna("")
+
+        unbekannt = (qualitaet_normalisiert != "") & (qualitaet_id == "")
+        for idx in df_in.index[unbekannt]:
+            log_file_func(
+                f"Qualität[{idx}]: unbekannter Wert '{qualitaet_text[idx]}' in field:mykis-qualität wird ignoriert"
+            )
+
+        # Fallback: keine Qualität-Angabe, aber Sequenzdaten vorhanden → "sequenziert"
+        sequenz_col = copy_column(df_in, "field:mykis-its-sequenz")
+        dna_col = copy_column(df_in, "field:dna barcode its:")
+        hat_sequenz = (sequenz_col.str.strip() != "") | (dna_col.str.strip() != "")
+        fallback_anwenden = (qualitaet_id == "") & hat_sequenz
+        qualitaet_id = qualitaet_id.where(~fallback_anwenden, QUALITAET_IDS["sequenziert"])
+
+        out_df[quality_column] = qualitaet_id
 
     out_df = convert_location_to_mtbq64(
         out_df, mtb_referenc_df, log_file_func=log_file_func
