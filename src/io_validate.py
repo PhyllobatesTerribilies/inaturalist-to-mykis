@@ -18,14 +18,18 @@ from typing import Sequence, Optional, Callable
 import pandas as pd
 
 
-# ==============================================================================
-# SETUP
-# ==============================================================================
+def make_logger(
+    log_func: Optional[Callable[[str], None]],
+) -> Callable[[str], None]:
+    """Log-Funktion mit ``print`` als Fallback, wenn ``log_func`` fehlt."""
 
+    def log(msg: str) -> None:
+        if log_func:
+            log_func(msg)
+        else:
+            print(msg)
 
-def setup_logging(level: int = logging.INFO) -> None:
-    """Konfiguriert Logging."""
-    logging.basicConfig(level=level, format="%(levelname)s: %(message)s")
+    return log
 
 
 # ==============================================================================
@@ -33,7 +37,7 @@ def setup_logging(level: int = logging.INFO) -> None:
 # ==============================================================================
 
 
-def read_any_table(path: Path) -> pd.DataFrame:
+def read_any_table(path: Path, min_columns: int = 2) -> pd.DataFrame:
     """
     Liest Tabelle (CSV oder Excel) mit automatischer Format-Erkennung.
 
@@ -45,6 +49,11 @@ def read_any_table(path: Path) -> pd.DataFrame:
 
     Args:
         path: Dateipfad
+        min_columns: Mindestanzahl Spalten, damit ein Parse-Versuch als
+            erfolgreich gilt. Dient der Trennzeichen-Disambiguierung: ein
+            falsches Trennzeichen liefert oft nur 1 breite Spalte. Für schmale
+            Referenzlisten (z.B. 2 Spalten) klein halten, für den breiten
+            iNaturalist-Export höher setzen.
 
     Returns:
         DataFrame mit geladenen Daten
@@ -63,7 +72,7 @@ def read_any_table(path: Path) -> pd.DataFrame:
     # Versuch 2: CSV mit automatischer Erkennung
     try:
         df = pd.read_csv(path, sep=None, engine="python", encoding="utf-8")
-        if len(df.columns) >= 10:
+        if len(df.columns) >= min_columns:
             logging.debug(f"CSV automatisch geladen: {len(df.columns)} Spalten")
             return df
     except Exception:
@@ -73,7 +82,7 @@ def read_any_table(path: Path) -> pd.DataFrame:
     for sep_name, sep_char in [("Komma", ","), ("Semikolon", ";"), ("Tab", "\t")]:
         try:
             df = pd.read_csv(path, sep=sep_char, engine="python", encoding="utf-8")
-            if len(df.columns) >= 10:
+            if len(df.columns) >= min_columns:
                 logging.debug(f"CSV mit {sep_name} geladen: {len(df.columns)} Spalten")
                 return df
         except Exception:
@@ -83,7 +92,7 @@ def read_any_table(path: Path) -> pd.DataFrame:
     for encoding in ["latin-1", "cp1252"]:
         try:
             df = pd.read_csv(path, sep=None, engine="python", encoding=encoding)
-            if len(df.columns) >= 10:
+            if len(df.columns) >= min_columns:
                 logging.debug(f"CSV mit Encoding {encoding} geladen")
                 return df
         except Exception:
@@ -108,13 +117,7 @@ def save_table(
     df: pd.DataFrame, path: Path, log_func: Optional[Callable[[str], None]] = None
 ) -> None:
     """Speichert DataFrame mit xlwt-Fallback für .xls."""
-
-    def log(msg: str) -> None:
-        if log_func:
-            log_func(msg)
-        else:
-            print(msg)
-
+    log = make_logger(log_func)
     ext = path.suffix.lower()
 
     if ext == ".xlsx":
@@ -148,14 +151,8 @@ def _save_xls_with_xlwt(
     Speichert DataFrame als echtes .xls mit xlwt direkt.
     Umgeht pandas-Limitierungen in Version 3.0+.
     """
+    log = make_logger(log_func)
 
-    def log(msg: str) -> None:
-        if log_func:
-            log_func(msg)
-        else:
-            print(msg)
-
-    # Validierung
     if len(df) > 65535:
         raise ValueError(
             f".xls unterstützt max 65.535 Zeilen, DataFrame hat {len(df)} Zeilen.\n"
@@ -175,39 +172,28 @@ def _save_xls_with_xlwt(
             "xlwt nicht installiert.\n" "Installiere mit: pip install xlwt"
         )
 
-    # Erstelle Workbook
     workbook = xlwt.Workbook(encoding="utf-8")
     worksheet = workbook.add_sheet("Sheet1")
 
-    # Style für MTB-Spalte (Zahl mit Dezimalkomma)
+    # MTB als Zahl mit deutschem Dezimalformat (0,000) statt als Text schreiben
     style_mtb = xlwt.XFStyle()
-    style_mtb.num_format_str = '0.000'
+    style_mtb.num_format_str = "0.000"
+    mtb_col_idx = list(df.columns).index("MTB") if "MTB" in df.columns else None
 
-    # MTB-Spaltenindex ermitteln (None wenn nicht vorhanden)
-    mtb_col_idx = (
-        list(df.columns).index("MTB") if "MTB" in df.columns else None
-    )
-
-    # Schreibe Spaltennamen
     for col_idx, col_name in enumerate(df.columns):
         worksheet.write(0, col_idx, str(col_name))
 
-    # Schreibe Daten
     for row_idx, row in enumerate(df.values, start=1):
         for col_idx, value in enumerate(row):
-            # Konvertiere NaN zu leerem String
             if pd.isna(value):
                 value = ""
-            # Konvertiere zu String wenn nötig
             elif not isinstance(value, (str, int, float, bool)):
                 value = str(value)
 
-            # MTB-Spalte: als Zahl mit deutschem Dezimalformat schreiben
             if col_idx == mtb_col_idx and isinstance(value, float):
                 worksheet.write(row_idx, col_idx, value, style_mtb)
             else:
                 worksheet.write(row_idx, col_idx, value)
-    # Speichere
     workbook.save(str(path))
     log(f"✅ Gespeichert als echtes .xls (mit xlwt direkt): {path.name}")
     log("   Kompatibel mit Access .mdb")
@@ -220,63 +206,73 @@ def _save_xls_with_xlwt(
 
 def inspect_table_header(df: pd.DataFrame) -> str:
     """
-    Erstellt Info-String über DataFrame-Struktur.
+    Erstellt einen lesbaren Überblick über die eingelesene Tabelle.
 
     Args:
         df: DataFrame zum Inspizieren
 
     Returns:
-        Mehrzeilige String-Beschreibung
+        Mehrzeilige String-Beschreibung (Zeilen-/Spaltenzahl + Spaltennamen)
     """
     lines = [
-        "INFO: Tabelle eingelesen",
-        f"- Zeilen:  {len(df)}",
-        f"- Spalten: {len(df.columns)}",
-        "- Spaltennamen:",
+        f"📊 Eingelesen: {len(df)} Zeilen, {len(df.columns)} Spalten",
+        "   Erkannte Spalten:",
     ]
     for col in df.columns:
-        lines.append(f"  - {col}")
+        lines.append(f"     • {col}")
     return "\n".join(lines)
 
 
 def validate_inat_columns(df: pd.DataFrame) -> tuple[list[str], list[str]]:
     """
-    Validiert iNaturalist Export auf Pflichtspalten.
+    Prüft den iNaturalist-Export auf die Spalten, die der Konverter braucht.
 
-    Prüft:
-    - Taxon-Name (scientific_name / taxon_name / species_guess)
-    - Datum (observed_on / observed_on_string)
-    - Optional: Koordinaten, Benutzer, Media
+    Pflicht (sonst Abbruch):
+    - Taxon-Name: scientific_name / taxon_name / species_guess
+    - Datum:      observed_on / observed_on_string
 
-    Args:
-        df: iNaturalist DataFrame
+    Empfohlen (nur Warnung, jeweils mit Folge bei Fehlen):
+    - Koordinaten:     latitude / longitude  → ohne sie keine MTB-Zuordnung
+    - Benutzername:    user_name / user_login → Erfasser/Sammler/Bestimmer leer
+    - Beobachtungs-ID: id → Rückverweis "iNNr:" (Feld Foto_Zeichnung) ohne Nummer
 
     Returns:
-        (errors, warnings) - Listen mit Fehlern und Warnungen
+        (errors, warnings) – leere Listen bedeuten "alles in Ordnung".
     """
     errors: list[str] = []
     warnings: list[str] = []
 
-    # Pflichtspalten
+    # --- Pflichtspalten ---
     if not _has_any(df, ["scientific_name", "taxon_name", "species_guess"]):
         errors.append(
-            "Fehlendes Taxon-Feld: Eine von [scientific_name, taxon_name, species_guess] ist erforderlich."
+            "Kein Taxon-Feld gefunden "
+            "(erwartet: scientific_name, taxon_name oder species_guess)."
         )
 
     if not _has_any(df, ["observed_on", "observed_on_string"]):
         errors.append(
-            "Fehlendes Datumsfeld: Eine von [observed_on, observed_on_string] ist erforderlich."
+            "Kein Datumsfeld gefunden "
+            "(erwartet: observed_on oder observed_on_string)."
         )
 
-    # Optionale Spalten (Warnungen)
+    # --- Empfohlene Spalten: Warnung samt Konsequenz ---
     if not _has_any(df, ["latitude", "longitude"]):
-        warnings.append("Koordinaten fehlen (optional, aber empfohlen).")
+        warnings.append(
+            "Koordinaten (latitude/longitude) fehlen – "
+            "ohne sie ist keine MTB-Zuordnung möglich."
+        )
 
     if not _has_any(df, ["user_name", "user_login"]):
-        warnings.append("Benutzername fehlt (optional).")
+        warnings.append(
+            "Benutzername (user_name/user_login) fehlt – "
+            "Erfasser, Sammler und Bestimmer bleiben ggf. leer."
+        )
 
-    if not _has_any(df, ["image_url", "sound_url"]):
-        warnings.append("Media-URL fehlt (optional).")
+    if "id" not in df.columns:
+        warnings.append(
+            "Beobachtungs-ID (id) fehlt – "
+            "der Rückverweis 'iNNr:' im Feld Foto_Zeichnung bleibt ohne Nummer."
+        )
 
     return errors, warnings
 
@@ -284,23 +280,3 @@ def validate_inat_columns(df: pd.DataFrame) -> tuple[list[str], list[str]]:
 def _has_any(df: pd.DataFrame, cols: Sequence[str]) -> bool:
     """Prüft ob mindestens eine der Spalten existiert."""
     return any(c in df.columns for c in cols)
-
-
-# ==============================================================================
-# TEMPLATE HANDLING
-# ==============================================================================
-
-
-def load_template_columns(path: str, sheet_name: int = 0) -> list[str]:
-    """
-    Lädt Spaltennamen aus Excel-Template.
-
-    Args:
-        path: Pfad zum Template
-        sheet_name: Sheet-Index (default: 0)
-
-    Returns:
-        Liste mit Spaltennamen
-    """
-    df = pd.read_excel(path, sheet_name=sheet_name, nrows=0)
-    return list(df.columns)

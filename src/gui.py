@@ -11,20 +11,21 @@ Einfache Benutzeroberfläche mit:
 
 from __future__ import annotations
 
+import csv
 import logging
 import sys
 import threading
 import tkinter as tk
 import traceback
+from datetime import datetime
 from pathlib import Path
 from tkinter import filedialog, messagebox, ttk
-import os
-from datetime import datetime
+from typing import Any, Callable, TextIO
 
 import pandas as pd
 
 from src.config import AppConfig
-from src.convert import map_inat_to_mykis
+from src.convert import CHANGE_LOG_COLUMNS, map_inat_to_mykis
 from src.io_validate import (
     inspect_table_header,
     read_any_table,
@@ -33,25 +34,9 @@ from src.io_validate import (
 )
 from src.version import __app_name__, __date__, __version__
 
-
 # ==============================================================================
 # LOGGING SETUP
 # ==============================================================================
-
-
-def setup_logging() -> None:
-    """Konfiguriert Logging in Datei und Console."""
-    log_path = Path.cwd() / "inat_to_mykis.log"
-    logging.basicConfig(
-        level=logging.INFO,
-        format="%(asctime)s %(levelname)s %(message)s",
-        handlers=[
-            logging.FileHandler(log_path, encoding="utf-8"),
-            logging.StreamHandler(sys.stdout),
-        ],
-    )
-    logging.info("=== App gestartet ===")
-    logging.info("Logfile: %s", log_path)
 
 
 def install_excepthook() -> None:
@@ -69,6 +54,24 @@ def install_excepthook() -> None:
 # MAIN GUI
 # ==============================================================================
 
+# Dateifilter für Tabellen-Auswahldialoge (Eingabe, Referenzen)
+TABELLEN_FILETYPES = [
+    ("Tabellen", "*.csv *.xlsx *.xls"),
+    ("CSV", "*.csv"),
+    ("Excel", "*.xlsx *.xls"),
+    ("Alle Dateien", "*.*"),
+]
+
+# Dateifilter für Ausgabe-/Anhänge-Dialoge
+MYKIS_FILETYPES = [
+    ("Excel 97-2003 (.xls)", "*.xls"),
+    ("Excel (.xlsx)", "*.xlsx"),
+    ("CSV (.csv)", "*.csv"),
+]
+
+# Standard-Abstand für Grid-Widgets
+PAD: dict[str, Any] = {"padx": 10, "pady": 8}
+
 
 class App(tk.Tk):
     """Hauptfenster der Anwendung."""
@@ -76,7 +79,6 @@ class App(tk.Tk):
     def __init__(self) -> None:
         super().__init__()
         self.cfg = AppConfig()
-        # setup_logging()
         install_excepthook()
 
         # Fenster-Konfiguration
@@ -99,89 +101,81 @@ class App(tk.Tk):
         self.log(f"✅ {__app_name__} v{__version__} ({__date__}) bereit.")
         self.log(f"📁 Template: {self.cfg.template_xls}")
 
+    def _add_file_row(
+        self,
+        parent: ttk.Frame,
+        label_row: int,
+        label: str,
+        var: tk.StringVar,
+        command: Callable[[], None],
+        button_text: str = "Durchsuchen…",
+        with_clear: bool = False,
+    ) -> tuple[ttk.Entry, ttk.Button]:
+        """
+        Baut eine Datei-Auswahlzeile (Label + Eingabefeld + Button) ins Grid.
+
+        Returns:
+            (Eingabefeld, Auswahl-Button) – für Aufrufer, die sie später ändern.
+        """
+        ttk.Label(parent, text=label).grid(row=label_row, column=0, sticky="w", **PAD)
+
+        row = ttk.Frame(parent)
+        row.grid(row=label_row + 1, column=0, sticky="ew", **PAD)
+
+        entry = ttk.Entry(row, textvariable=var)
+        entry.pack(side="left", fill="x", expand=True)
+
+        button = ttk.Button(row, text=button_text, command=command)
+        button.pack(side="left", padx=6)
+
+        if with_clear:
+            ttk.Button(row, text="✕", width=3, command=lambda: var.set("")).pack(
+                side="left"
+            )
+        return entry, button
+
     def _build_ui(self) -> None:
         """Erstellt die Benutzeroberfläche."""
-        pad = {"padx": 10, "pady": 8}
         frm = ttk.Frame(self)
         frm.pack(fill="both", expand=True)
 
-        # -----------------------------------------------------------------
-        # Eingabedatei
-        # -----------------------------------------------------------------
-        ttk.Label(frm, text="Eingabedatei (iNaturalist CSV/XLSX/XLS):").grid(
-            row=0, column=0, sticky="w", **pad
+        # Datei-Auswahlzeilen
+        self._add_file_row(
+            frm,
+            0,
+            "Eingabedatei (iNaturalist CSV/XLSX/XLS):",
+            self.var_input,
+            self.pick_input,
         )
-
-        row_in = ttk.Frame(frm)
-        row_in.grid(row=1, column=0, sticky="ew", **pad)
-        ttk.Entry(row_in, textvariable=self.var_input).pack(
-            side="left", fill="x", expand=True
+        self.output_entry, self.output_btn = self._add_file_row(
+            frm,
+            2,
+            "Ausgabedatei (.xls/.xlsx/.csv):",
+            self.var_output,
+            self.pick_output,
+            button_text="Ziel wählen…",
         )
-        ttk.Button(row_in, text="Durchsuchen…", command=self.pick_input).pack(
-            side="left", padx=6
+        self._add_file_row(
+            frm,
+            4,
+            "Fundortreferenz - Liste",
+            self.var_ref,
+            self.pick_ref,
         )
-
-        # -----------------------------------------------------------------
-        # Ausgabedatei
-        # -----------------------------------------------------------------
-        ttk.Label(frm, text="Ausgabedatei (.xls/.xlsx/.csv):").grid(
-            row=2, column=0, sticky="w", **pad
-        )
-
-        row_out = ttk.Frame(frm)
-        row_out.grid(row=3, column=0, sticky="ew", **pad)
-
-        self.output_entry = ttk.Entry(row_out, textvariable=self.var_output)
-        self.output_entry.pack(side="left", fill="x", expand=True)
-
-        self.output_btn = ttk.Button(
-            row_out, text="Ziel wählen…", command=self.pick_output
-        )
-        self.output_btn.pack(side="left", padx=6)
-
-        # -----------------------------------------------------------------
-        # Referenzdatei
-        # -----------------------------------------------------------------
-        ttk.Label(frm, text="Fundortreferenz - Liste").grid(
-            row=4, column=0, sticky="w", **pad
-        )
-
-        row_ref = ttk.Frame(frm)
-        row_ref.grid(row=5, column=0, sticky="ew", **pad)
-
-        ttk.Entry(row_ref, textvariable=self.var_ref).pack(
-            side="left", fill="x", expand=True
-        )
-
-        ttk.Button(row_ref, text="Durchsuchen…", command=self.pick_ref).pack(
-            side="left", padx=6
+        self._add_file_row(
+            frm,
+            6,
+            "Namenszuordnungs - Liste (user_login → mykis-name):",
+            self.var_name_ref,
+            self.pick_name_ref,
+            with_clear=True,
         )
 
         # -----------------------------------------------------------------
-        # Namenskonvertierungs-Datei
-        # -----------------------------------------------------------------
-        ttk.Label(frm, text="Namenszuordnungs - Liste (user_login → mykis-name):").grid(
-            row=6, column=0, sticky="w", **pad
-        )
-
-        row_name_ref = ttk.Frame(frm)
-        row_name_ref.grid(row=7, column=0, sticky="ew", **pad)
-
-        ttk.Entry(row_name_ref, textvariable=self.var_name_ref).pack(
-            side="left", fill="x", expand=True
-        )
-        ttk.Button(row_name_ref, text="Durchsuchen…", command=self.pick_name_ref).pack(
-            side="left", padx=6
-        )
-        ttk.Button(row_name_ref, text="✕", width=3, command=lambda: self.var_name_ref.set("")).pack(
-            side="left"
-        )
-
-        # -----------------------------------------------------------------
-        # Optionen: An bestehende Datei anhängen
+        # Optionen
         # -----------------------------------------------------------------
         box = ttk.LabelFrame(frm, text="Optionen")
-        box.grid(row=8, column=0, sticky="ew", **pad)
+        box.grid(row=8, column=0, sticky="ew", **PAD)
         ttk.Checkbutton(
             box,
             text="An bestehende Mykis-Datei anhängen (Ausgabedatei = Anhänge-Datei)",
@@ -199,18 +193,16 @@ class App(tk.Tk):
         # Buttons
         # -----------------------------------------------------------------
         row_btn = ttk.Frame(frm)
-        row_btn.grid(row=9, column=0, sticky="e", **pad)
-        ttk.Button(
-            row_btn,
-            text="Konvertieren",
-            command=self.run_convert,
-        ).pack(side="right", padx=6)
+        row_btn.grid(row=9, column=0, sticky="e", **PAD)
+        ttk.Button(row_btn, text="Konvertieren", command=self.run_convert).pack(
+            side="right", padx=6
+        )
         ttk.Button(row_btn, text="Beenden", command=self.destroy).pack(side="right")
 
         # -----------------------------------------------------------------
         # Protokoll (Log-Fenster)
         # -----------------------------------------------------------------
-        ttk.Label(frm, text="Protokoll:").grid(row=10, column=0, sticky="w", **pad)
+        ttk.Label(frm, text="Protokoll:").grid(row=10, column=0, sticky="w", **PAD)
 
         self.txt = tk.Text(frm, height=15, wrap="word", font=("Consolas", 9))
         self.txt.grid(row=11, column=0, sticky="nsew", padx=10, pady=(0, 10))
@@ -228,87 +220,99 @@ class App(tk.Tk):
     # -------------------------------------------------------------------------
 
     def log(self, msg: str) -> None:
-        """Schreibt Nachricht ins Protokoll-Fenster."""
+        """Schreibt Nachricht ins Protokoll-Fenster (thread-sicher)."""
+        # Wird auch aus dem Worker-Thread aufgerufen → Tk-Update in den
+        # Main-Thread marshallen (Tkinter ist nicht thread-safe).
+        self.after(0, self._append_log, msg)
+
+    def _append_log(self, msg: str) -> None:
+        """Hängt Text ans Protokoll an (läuft im Tk-Main-Thread)."""
         self.txt.insert("end", msg + "\n")
         self.txt.see("end")
-        self.update_idletasks()
+
+    def _run_on_main(self, func: Callable[[], Any]) -> Any:
+        """
+        Führt ``func`` im Tk-Main-Thread aus und liefert dessen Ergebnis.
+
+        Blockiert den aufrufenden (Worker-)Thread bis zur Ausführung – nötig
+        für modale Dialoge (``messagebox``), die nicht thread-sicher sind.
+        """
+        # Bereits im Main-Thread? Direkt ausführen – sonst würde done.wait()
+        # den Event-Loop blockieren, der den after()-Callback abarbeiten müsste.
+        if threading.current_thread() is threading.main_thread():
+            return func()
+
+        result: dict[str, Any] = {}
+        done = threading.Event()
+
+        def wrapper() -> None:
+            try:
+                result["value"] = func()
+            finally:
+                done.set()
+
+        self.after(0, wrapper)
+        done.wait()
+        return result.get("value")
+
+    @staticmethod
+    def _logs_dir() -> Path:
+        """
+        Verzeichnis für Logdateien (wird bei Bedarf angelegt).
+
+        Gepackte .exe → neben der ausführbaren Datei, sonst Projektwurzel.
+        So landen die Logs unabhängig vom Arbeitsverzeichnis an einer
+        vorhersehbaren, beschreibbaren Stelle.
+        """
+        if getattr(sys, "frozen", False):
+            base = Path(sys.executable).parent
+        else:
+            base = Path(__file__).resolve().parent.parent
+        d = base / "logs"
+        d.mkdir(parents=True, exist_ok=True)
+        return d
 
     # -------------------------------------------------------------------------
     # Dateiauswahl
     # -------------------------------------------------------------------------
 
+    def _pick_table_into(self, var: tk.StringVar, title: str) -> str:
+        """Öffnet einen Tabellen-Auswahldialog und speichert das Ergebnis in var."""
+        p = filedialog.askopenfilename(title=title, filetypes=TABELLEN_FILETYPES)
+        if p:
+            var.set(p)
+        return p
+
     def pick_input(self) -> None:
         """Dialog für Eingabedatei."""
-        p = filedialog.askopenfilename(
-            title="Eingabedatei wählen",
-            filetypes=[
-                ("Tabellen", "*.csv *.xlsx *.xls"),
-                ("CSV", "*.csv"),
-                ("Excel", "*.xlsx *.xls"),
-                ("Alle Dateien", "*.*"),
-            ],
-        )
-        if p:
-            self.var_input.set(p)
+        if self._pick_table_into(self.var_input, "Eingabedatei wählen"):
             self.suggest_output()
 
-    def pick_output(self) -> None:
-        """Dialog für Ausgabedatei (oder Anhänge-Datei im Anhänge-Modus)."""
-        is_append_mode = self.var_enable_append.get()
-
-        if is_append_mode:
-            # Anhänge-Modus: Bestehende Datei öffnen
-            p = filedialog.askopenfilename(
-                title="Bestehende Mykis-Datei zum Anhängen wählen",
-                filetypes=[
-                    ("Excel 97-2003 (.xls)", "*.xls"),
-                    ("Excel (.xlsx)", "*.xlsx"),
-                    ("CSV (.csv)", "*.csv"),
-                    ("Alle Dateien", "*.*"),
-                ],
-            )
-        else:
-            # Normal-Modus: Neue Datei speichern
-            p = filedialog.asksaveasfilename(
-                title="Ausgabedatei wählen",
-                defaultextension=".xls",
-                filetypes=[
-                    ("Excel 97-2003 (.xls)", "*.xls"),
-                    ("Excel (.xlsx)", "*.xlsx"),
-                    ("CSV (.csv)", "*.csv"),
-                ],
-            )
-
-        if p:
-            self.var_output.set(p)
+    def pick_ref(self) -> None:
+        """Dialog für optionale Fundort-Referenzdatei."""
+        self._pick_table_into(self.var_ref, "Referenzdatei wählen")
 
     def pick_name_ref(self) -> None:
         """Dialog für optionale Namenskonvertierungs-Datei."""
-        p = filedialog.askopenfilename(
-            title="Namenskonvertierungs-Datei wählen",
-            filetypes=[
-                ("Tabellen", "*.csv *.xlsx *.xls"),
-                ("CSV", "*.csv"),
-                ("Excel", "*.xlsx *.xls"),
-                ("Alle Dateien", "*.*"),
-            ],
-        )
-        if p:
-            self.var_name_ref.set(p)
+        self._pick_table_into(self.var_name_ref, "Namenskonvertierungs-Datei wählen")
 
-    def pick_ref(self) -> None:
-        """Dialog für optionale Referenzdatei."""
-        p = filedialog.askopenfilename(
-            title="Referenzdatei wählen",
-            filetypes=[
-                ("Tabellen", "*.csv *.xlsx *.xls"),
-                ("CSV", "*.csv"),
-                ("Excel", "*.xlsx *.xls"),
-                ("Alle Dateien", "*.*"),
-            ],
-        )
+    def pick_output(self) -> None:
+        """Dialog für Ausgabedatei (oder Anhänge-Datei im Anhänge-Modus)."""
+        if self.var_enable_append.get():
+            # Anhänge-Modus: bestehende Mykis-Datei öffnen
+            p = filedialog.askopenfilename(
+                title="Bestehende Mykis-Datei zum Anhängen wählen",
+                filetypes=MYKIS_FILETYPES + [("Alle Dateien", "*.*")],
+            )
+        else:
+            # Normal-Modus: neue Datei speichern
+            p = filedialog.asksaveasfilename(
+                title="Ausgabedatei wählen",
+                defaultextension=".xls",
+                filetypes=MYKIS_FILETYPES,
+            )
         if p:
-            self.var_ref.set(p)
+            self.var_output.set(p)
 
     def suggest_output(self) -> None:
         """Schlägt Ausgabedatei basierend auf Eingabe vor."""
@@ -372,7 +376,14 @@ class App(tk.Tk):
         # Thread starten (damit GUI nicht einfriert)
         threading.Thread(
             target=self._convert_worker,
-            args=(Path(inp), Path(out), enable_append, Path(ref) if ref else None, Path(name_ref) if name_ref else None, use_login_as_erfasser),
+            args=(
+                Path(inp),
+                Path(out),
+                enable_append,
+                Path(ref) if ref else None,
+                Path(name_ref) if name_ref else None,
+                use_login_as_erfasser,
+            ),
             daemon=True,
         ).start()
 
@@ -392,8 +403,12 @@ class App(tk.Tk):
             inp: Eingabedatei (iNaturalist)
             out: Ausgabedatei (im Anhänge-Modus auch die Datei zum Anhängen)
             enable_append: Wenn True, wird out zuerst geladen und neue Daten angehängt
-            ref: Optionale Referenzdatei (z. B. für Abgleich oder Anreicherung)
+            ref: Optionale Fundort-Referenzdatei (MTB-Abgleich)
+            name_ref: Optionale Namenszuordnungs-Datei (user_login → mykis-name)
+            use_login_as_erfasser: Wenn True, wird user_login als Erfasser übernommen
         """
+        log_file: TextIO | None = None
+        changes_file: TextIO | None = None
         try:
             # -----------------------------------------------------------------
             # 1. Datei einlesen
@@ -403,65 +418,80 @@ class App(tk.Tk):
             if not inp.exists():
                 raise FileNotFoundError(f"Datei nicht gefunden: {inp}")
 
-            df = read_any_table(inp)
+            # Breiter iNaturalist-Export → hoher Schwellwert für die
+            # Trennzeichen-Erkennung.
+            df = read_any_table(inp, min_columns=10)
             self.log(inspect_table_header(df))
 
             # -----------------------------------------------------------------
-            # 1b. Referenzdatei einlesen (optional)
+            # 2. Eingabedatei prüfen
             # -----------------------------------------------------------------
-            # df_ref = None
-            # if ref is not None:
-            #     self.log(f"\n📂 Lese Referenzdatei {ref.name}...")
-            #     if not ref.exists():
-            #         raise FileNotFoundError(f"Referenzdatei nicht gefunden: {ref}")
-            #     df_ref = read_any_table(ref)
-            #     self.log(inspect_table_header(df_ref))
-
-            # -----------------------------------------------------------------
-            # 2. Validierung
-            # -----------------------------------------------------------------
+            self.log("\n🔍 Prüfe Eingabedatei auf benötigte Spalten...")
             errors, warnings = validate_inat_columns(df)
 
-            if warnings:
-                self.log("\n⚠️  Warnungen:")
-                for w in warnings:
-                    self.log(f"  • {w}")
+            for w in warnings:
+                self.log(f"  ⚠️  {w}")
 
             if errors:
-                self.log("\n❌ Fehler:")
                 for e in errors:
-                    self.log(f"  • {e}")
-                messagebox.showerror(
-                    "Fehler",
-                    "Pflichtspalten fehlen!\n\nDetails siehe Protokoll.",
+                    self.log(f"  ❌ {e}")
+                self.log("\n❌ Abbruch: Pflichtspalten fehlen.")
+                self._run_on_main(
+                    lambda: messagebox.showerror(
+                        "Eingabedatei unvollständig",
+                        "Pflichtspalten fehlen!\n\nDetails siehe Protokoll-Fenster.",
+                    )
                 )
                 return
+
+            if warnings:
+                self.log(
+                    "  → Pflichtspalten vorhanden, Konvertierung wird fortgesetzt."
+                )
+            else:
+                self.log("  ✅ Alle benötigten Spalten vorhanden.")
 
             # -----------------------------------------------------------------
             # 3. Konvertierung
             # -----------------------------------------------------------------
-            self.log(f"\n🔄 Konvertiere nach Mykis-Format...")
+            self.log("\n🔄 Konvertiere nach Mykis-Format...")
 
-            os.makedirs("logs", exist_ok=True)
-            log_path = (
-                f"logs/inat_to_mykis_{datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}.log"
-            )
+            timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+            log_path = self._logs_dir() / f"inat_to_mykis_{timestamp}.log"
+            log_handle = open(log_path, "a", encoding="utf-8")
+            log_file = log_handle  # für das Schließen im finally
 
-            # Funktion nutzt log_path direkt aus dem äußeren Scope
+            # Datei bleibt für die gesamte Konvertierung offen (Schließen im finally).
             def log_to_file(message: str) -> None:
-                with open(log_path, "a", encoding="utf-8") as f:
-                    f.write(message + "\n")
+                log_handle.write(message + "\n")
+                log_handle.flush()
+
+            # Zweites Log: Änderungen der Fundort-Zuordnung als CSV (nur mit
+            # Referenzdatei, da nur dann Zuordnungen entstehen).
+            change_func: Callable[[dict[str, Any]], None] | None = None
+            if ref is not None:
+                changes_path = (
+                    self._logs_dir() / f"inat_to_mykis_{timestamp}_changes.csv"
+                )
+                changes_file = open(changes_path, "w", newline="", encoding="utf-8-sig")
+                changes_writer = csv.DictWriter(
+                    changes_file, fieldnames=CHANGE_LOG_COLUMNS, delimiter=";"
+                )
+                changes_writer.writeheader()
+                change_func = changes_writer.writerow
+                self.log(f"📝 Änderungs-CSV: {changes_path.name}")
 
             template = self.cfg.resolve_template_path()
             out_df = map_inat_to_mykis(
                 df,
                 template_path=str(template),
                 template_sheet=self.cfg.template_sheet,
-                mtb_reference_path=str(ref),
+                mtb_reference_path=str(ref) if ref else None,
                 name_ref_path=str(name_ref) if name_ref else None,
                 use_login_as_erfasser=use_login_as_erfasser,
                 log_func=self.log,
                 log_file_func=log_to_file,
+                change_func=change_func,
             )
 
             # -----------------------------------------------------------------
@@ -471,7 +501,7 @@ class App(tk.Tk):
                 self.log(f"\n📎 Anhänge-Modus: Lade bestehende Datei {out.name}")
 
                 if not out.exists():
-                    self.log(f"   ⚠️  Datei existiert noch nicht, wird neu erstellt")
+                    self.log("   ⚠️  Datei existiert noch nicht, wird neu erstellt")
                 else:
                     # Bestehende Datei laden
                     existing_df = read_any_table(out)
@@ -510,18 +540,20 @@ class App(tk.Tk):
                                     f"      ... und {len(missing_in_new) - 10} weitere"
                                 )
 
-                        response = messagebox.askyesno(
-                            "Spalten unterschiedlich",
-                            f"Die Spalten stimmen nicht überein!\n\n"
-                            f"Bestehende Datei: {len(existing_cols)} Spalten\n"
-                            f"Neue Daten: {len(new_cols)} Spalten\n\n"
-                            f"Fehlende Spalten in neuen Daten: {len(missing_in_new)}\n"
-                            f"Zusätzliche Spalten in neuen Daten: {len(missing_in_existing)}\n\n"
-                            f"Trotzdem fortfahren?\n\n"
-                            f"Info: Fehlende Spalten bleiben leer.\n"
-                            f"Zusätzliche Spalten werden hinzugefügt.\n"
-                            f"(Details im Protokoll-Fenster)",
-                            icon="warning",
+                        response = self._run_on_main(
+                            lambda: messagebox.askyesno(
+                                "Spalten unterschiedlich",
+                                f"Die Spalten stimmen nicht überein!\n\n"
+                                f"Bestehende Datei: {len(existing_cols)} Spalten\n"
+                                f"Neue Daten: {len(new_cols)} Spalten\n\n"
+                                f"Fehlende Spalten in neuen Daten: {len(missing_in_new)}\n"
+                                f"Zusätzliche Spalten in neuen Daten: {len(missing_in_existing)}\n\n"
+                                f"Trotzdem fortfahren?\n\n"
+                                f"Info: Fehlende Spalten bleiben leer.\n"
+                                f"Zusätzliche Spalten werden hinzugefügt.\n"
+                                f"(Details im Protokoll-Fenster)",
+                                icon="warning",
+                            )
                         )
                         if not response:
                             self.log("\n❌ Abgebrochen durch Benutzer")
@@ -531,7 +563,7 @@ class App(tk.Tk):
                     old_count = len(existing_df)
                     new_count = len(out_df)
                     out_df = pd.concat([existing_df, out_df], ignore_index=True)
-                    self.log(f"   ✅ Erfolgreich angehängt")
+                    self.log("   ✅ Erfolgreich angehängt")
                     self.log(f"   📊 Vorher: {old_count} Zeilen")
                     self.log(f"   📊 Hinzugefügt: {new_count} Zeilen")
                     self.log(f"   📊 Gesamt: {len(out_df)} Zeilen")
@@ -557,11 +589,13 @@ class App(tk.Tk):
             msg = "\n".join(summary)
             self.log(msg)
 
-            messagebox.showinfo(
-                "Fertig",
-                f"Konvertierung erfolgreich!\n\n"
-                f"Zeilen: {len(out_df)}\n"
-                f"Datei: {out.name}",
+            self._run_on_main(
+                lambda: messagebox.showinfo(
+                    "Fertig",
+                    f"Konvertierung erfolgreich!\n\n"
+                    f"Zeilen: {len(out_df)}\n"
+                    f"Datei: {out.name}",
+                )
             )
 
         except Exception as e:
@@ -571,8 +605,16 @@ class App(tk.Tk):
             tb = traceback.format_exc()
             self.log(f"\n❌ FEHLER:\n{tb}")
 
-            messagebox.showerror(
-                "Fehler",
-                f"Fehler beim Konvertieren:\n\n{e}\n\n"
-                f"Details siehe Protokoll-Fenster.",
+            self._run_on_main(
+                lambda: messagebox.showerror(
+                    "Fehler",
+                    f"Fehler beim Konvertieren:\n\n{e}\n\n"
+                    f"Details siehe Protokoll-Fenster.",
+                )
             )
+
+        finally:
+            if log_file is not None:
+                log_file.close()
+            if changes_file is not None:
+                changes_file.close()

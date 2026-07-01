@@ -2,7 +2,6 @@
 # -*- coding: utf-8 -*-
 """Entry point for iNaturalist -> MykIS GUI."""
 
-# NACHHER:
 from src.gui import App
 
 
