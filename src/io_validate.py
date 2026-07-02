@@ -70,8 +70,10 @@ def read_any_table(path: Path, min_columns: int = 2) -> pd.DataFrame:
             pass  # Falls Excel fehlschlägt, versuche als CSV
 
     # Versuch 2: CSV mit automatischer Erkennung
+    # utf-8-sig entfernt ein evtl. BOM (Excel „CSV UTF-8"), liest aber auch
+    # normale utf-8-Dateien – sonst hinge das BOM am ersten Spaltennamen.
     try:
-        df = pd.read_csv(path, sep=None, engine="python", encoding="utf-8")
+        df = pd.read_csv(path, sep=None, engine="python", encoding="utf-8-sig")
         if len(df.columns) >= min_columns:
             logging.debug(f"CSV automatisch geladen: {len(df.columns)} Spalten")
             return df
@@ -81,7 +83,7 @@ def read_any_table(path: Path, min_columns: int = 2) -> pd.DataFrame:
     # Versuch 3: CSV mit verschiedenen Trennzeichen
     for sep_name, sep_char in [("Komma", ","), ("Semikolon", ";"), ("Tab", "\t")]:
         try:
-            df = pd.read_csv(path, sep=sep_char, engine="python", encoding="utf-8")
+            df = pd.read_csv(path, sep=sep_char, engine="python", encoding="utf-8-sig")
             if len(df.columns) >= min_columns:
                 logging.debug(f"CSV mit {sep_name} geladen: {len(df.columns)} Spalten")
                 return df

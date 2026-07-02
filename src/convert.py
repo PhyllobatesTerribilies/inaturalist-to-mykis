@@ -166,8 +166,8 @@ def build_name_lookup(name_ref_df: pd.DataFrame) -> dict[str, str]:
     mykis_name_col = cols.get("mykis-name")
 
     if login_col is None or mykis_name_col is None:
-        print(
-            "⚠️  WARNUNG: Namenskonvertierungs-Datei braucht Spalten 'user_login' und 'mykis-name'"
+        logging.warning(
+            "Namenskonvertierungs-Datei braucht Spalten 'user_login' und 'mykis-name'"
         )
         return {}
 
@@ -503,6 +503,27 @@ CHANGE_LOG_COLUMNS = ["id", "MTB_alt", "MTB_neu"] + [
     f"{col}_{suffix}" for col in _MTBQ_REFERENCE_COLUMNS for suffix in ("alt", "neu")
 ]
 
+# Spaltenkopf der Namenskonvertierungs-CSV: alle Nutzer-Spalten aus iNaturalist
+# plus Erfasser alt/neu. Fehlende Quellspalten bleiben leer.
+NAME_CHANGE_LOG_COLUMNS = [
+    "id",
+    "user_id",
+    "user_login",
+    "user_name",
+    "erfasser_alt",
+    "erfasser_neu",
+]
+
+# Spaltenkopf der zweiten, deduplizierten Namens-CSV (eine Zeile pro user_login)
+NAME_UNIQUE_LOG_COLUMNS = [
+    "user_id",
+    "user_login",
+    "user_name",
+    "erfasser_alt",
+    "erfasser_neu",
+    "anzahl",
+]
+
 
 def _load_tk25_shapefile(log_file_func: Callable[[str], None]) -> gpd.GeoDataFrame:
     """Lädt das TK25-Shapefile und projiziert es nach WGS84."""
@@ -525,14 +546,19 @@ def _build_reference_map(
     mtb_col = next((col for col in mtb_ref_df.columns if col.lower() == "mtb"), None)
     ref_map: dict[str, list[tuple[Hashable, pd.Series]]] = {}
     missing_coords = 0
+    no_quadrant: list[str] = []
     if not mtb_ref_df.empty and mtb_col:
         for ref_idx, ref_row in mtb_ref_df.iterrows():
-            parts = str(ref_row[mtb_col]).strip().replace(".", ",").split(",")
+            raw = str(ref_row[mtb_col]).strip()
+            parts = raw.replace(".", ",").split(",")
             if len(parts) >= 2:
                 # "1000,233" → Blatt-ID + max. 2 Stellen des Quadranten
                 id_key = f"{parts[0].strip()},{parts[1].strip()[:2]}"
             else:
+                # MTB ohne Quadrant: wird abgelegt, aber nie gesucht (der
+                # Fund-Schlüssel enthält immer den 16tel-Quadranten) → toter Eintrag.
                 id_key = parts[0].strip()
+                no_quadrant.append(raw)
             ref_map.setdefault(id_key, []).append((ref_idx, ref_row))
 
             if pd.isnull(ref_row["ostwert2"]) or pd.isnull(ref_row["nordwert2"]):
@@ -546,6 +572,14 @@ def _build_reference_map(
         log_file_func(
             f"Referenz Datei: {missing_coords} Einträge ohne Geokoordinaten "
             f"(ostwert2,nordwert2)"
+        )
+    if no_quadrant:
+        beispiele = ", ".join(no_quadrant[:10])
+        if len(no_quadrant) > 10:
+            beispiele += f", … (+{len(no_quadrant) - 10})"
+        log_file_func(
+            f"Warnung: {len(no_quadrant)} Referenz-Einträge ohne Quadrant werden "
+            f"keinem Fund zugeordnet (z.B. {beispiele})"
         )
     return ref_map, mtb_col
 
@@ -593,6 +627,11 @@ def _nearest_reference(
 def _csv_value(value: Any) -> Any:
     """NaN/None → leeres Feld, sonst unverändert (für die Änderungs-CSV)."""
     return "" if pd.isna(value) else value
+
+
+def _optional_cell(df: pd.DataFrame, idx: Hashable, column: str) -> Any:
+    """Zellwert für die CSV oder leer, wenn die Spalte fehlt."""
+    return _csv_value(df.at[idx, column]) if column in df.columns else ""
 
 
 def _copy_reference_row(
@@ -873,6 +912,7 @@ def resolve_erfasser(
     use_login_as_erfasser: bool,
     log: Callable[[str], None],
     log_file_func: Callable[[str], None],
+    name_change_func: Optional[Callable[[dict[str, Any]], None]] = None,
 ) -> pd.Series:
     """
     Ermittelt die Erfasser-Namen (auch Basis für Sammler/Bestimmer).
@@ -880,6 +920,9 @@ def resolve_erfasser(
     Reihenfolge:
     1. user_name → "Nachname, Vorname" (bzw. user_login, wenn Option gesetzt)
     2. Namenszuordnungs-Liste (user_login → mykis-name) hat Vorrang
+
+    ``name_change_func`` erhält – falls gesetzt – pro tatsächlich ersetztem
+    Namen einen Datensatz (Schema: ``NAME_CHANGE_LOG_COLUMNS``).
     """
     names_series = df_in.apply(extract_name, axis=1)
 
@@ -894,23 +937,67 @@ def resolve_erfasser(
             login_series = copy_column(df_in, "user_login")
             lookup_result = login_series.map(name_lookup)
             # Lookup-Ergebnis hat Vorrang, Fallback auf extract_name
-            names_series = lookup_result.where(
-                lookup_result.notna()
-                & (lookup_result != "nan")
-                & (lookup_result != ""),
-                names_series,
+            applied = (
+                lookup_result.notna() & (lookup_result != "nan") & (lookup_result != "")
             )
+            fallback = names_series  # Erfasser vor der Ersetzung
+            names_series = lookup_result.where(applied, fallback)
             log(
                 f"✅ Namenskonvertierung: {len(name_lookup)} Einträge, "
-                f"{lookup_result.notna().sum()} Treffer"
+                f"{int(applied.sum())} Treffer"
             )
             log_file_func(
                 f"Namenskonvertierung geladen: {name_ref_path}, {len(name_lookup)} Einträge"
             )
+            for idx in df_in.index[applied]:
+                login = login_series.at[idx]
+                alt = fallback.at[idx]
+                neu = lookup_result.at[idx]
+                log_file_func(
+                    f"Namenskonvertierung:[{idx}] user_login '{login}': "
+                    f"'{alt}' → '{neu}'"
+                )
+                if name_change_func is not None:
+                    name_change_func(
+                        {
+                            "id": idx,
+                            "user_id": _optional_cell(df_in, idx, "user_id"),
+                            "user_login": _optional_cell(df_in, idx, "user_login"),
+                            "user_name": _optional_cell(df_in, idx, "user_name"),
+                            "erfasser_alt": _csv_value(alt),
+                            "erfasser_neu": _csv_value(neu),
+                        }
+                    )
+            log_file_func(f"Namenskonvertierung: {int(applied.sum())} Zeilen ersetzt")
     elif name_ref_path:
         log(f"⚠️  Namenskonvertierungs-Datei nicht gefunden: {name_ref_path}")
 
     return names_series
+
+
+def dedupe_name_changes(records: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """
+    Fasst Namensersetzungen zu einer Zeile pro ``user_login`` zusammen.
+
+    Reihenfolge des ersten Auftretens bleibt erhalten; ``anzahl`` zählt, wie oft
+    der Name vorkam. Schema der Rückgabe: ``NAME_UNIQUE_LOG_COLUMNS``.
+    """
+    unique: dict[Any, dict[str, Any]] = {}
+    for rec in records:
+        key = rec.get("user_login", "")
+        row = unique.get(key)
+        if row is None:
+            unique[key] = {
+                "user_id": rec.get("user_id", ""),
+                "user_login": rec.get("user_login", ""),
+                "user_name": rec.get("user_name", ""),
+                "erfasser_alt": rec.get("erfasser_alt", ""),
+                "erfasser_neu": rec.get("erfasser_neu", ""),
+                "anzahl": 1,
+            }
+        else:
+            row["anzahl"] += 1
+    return list(unique.values())
 
 
 def map_locations(df_in: pd.DataFrame, out_df: pd.DataFrame) -> None:
@@ -960,7 +1047,11 @@ def map_coordinates(
     foto_series = "iNNr:" + id_col.astype(str).fillna("")
     assign_if_exists(out_df, "Foto_Zeichnung", foto_series)
 
-    assign_if_exists(out_df, "Ungenauigkeit", copy_column(df_in, "positional_accuracy"))
+    # Ungenauigkeit als Dezimalzahl mit deutschem Komma (z.B. "3.5" → "3,5")
+    ungenauigkeit = copy_column(df_in, "positional_accuracy").str.replace(
+        ".", ",", regex=False
+    )
+    assign_if_exists(out_df, "Ungenauigkeit", ungenauigkeit)
 
 
 def map_custom_fields(df_in: pd.DataFrame, out_df: pd.DataFrame) -> None:
@@ -1063,6 +1154,7 @@ def map_inat_to_mykis(
     use_login_as_erfasser: bool = False,
     log_func: Optional[Callable[[str], None]] = None,
     change_func: Optional[Callable[[dict[str, Any]], None]] = None,
+    name_change_func: Optional[Callable[[dict[str, Any]], None]] = None,
 ) -> pd.DataFrame:
     """
     Konvertiert iNaturalist-Daten ins Mykis-Format.
@@ -1078,6 +1170,8 @@ def map_inat_to_mykis(
         log_func: Logging ins GUI-Protokoll (Fallback: print)
         change_func: optionaler Callback für die Änderungs-CSV der
             Fundort-Zuordnung (Datensatz-Schema: CHANGE_LOG_COLUMNS)
+        name_change_func: optionaler Callback für die Namenskonvertierungs-CSV
+            (Datensatz-Schema: NAME_CHANGE_LOG_COLUMNS)
 
     Returns:
         DataFrame im Mykis-Format
@@ -1111,7 +1205,12 @@ def map_inat_to_mykis(
     map_dates(df_in, out_df)
 
     names_series = resolve_erfasser(
-        df_in, name_ref_path, use_login_as_erfasser, log, log_file_func
+        df_in,
+        name_ref_path,
+        use_login_as_erfasser,
+        log,
+        log_file_func,
+        name_change_func,
     )
     assign_if_exists(out_df, "erfasser", names_series)
     assign_if_exists(

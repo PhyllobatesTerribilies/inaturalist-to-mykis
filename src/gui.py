@@ -25,7 +25,13 @@ from typing import Any, Callable, TextIO
 import pandas as pd
 
 from src.config import AppConfig
-from src.convert import CHANGE_LOG_COLUMNS, map_inat_to_mykis
+from src.convert import (
+    CHANGE_LOG_COLUMNS,
+    NAME_CHANGE_LOG_COLUMNS,
+    NAME_UNIQUE_LOG_COLUMNS,
+    dedupe_name_changes,
+    map_inat_to_mykis,
+)
 from src.io_validate import (
     inspect_table_header,
     read_any_table,
@@ -409,6 +415,7 @@ class App(tk.Tk):
         """
         log_file: TextIO | None = None
         changes_file: TextIO | None = None
+        names_file: TextIO | None = None
         try:
             # -----------------------------------------------------------------
             # 1. Datei einlesen
@@ -481,6 +488,25 @@ class App(tk.Tk):
                 change_func = changes_writer.writerow
                 self.log(f"📝 Änderungs-CSV: {changes_path.name}")
 
+            # Drittes Log: ersetzte Erfasser-Namen als CSV (nur mit
+            # Namenszuordnungs-Liste). Records werden zusätzlich gesammelt, um
+            # danach eine zweite, deduplizierte CSV zu schreiben.
+            name_change_func: Callable[[dict[str, Any]], None] | None = None
+            name_records: list[dict[str, Any]] = []
+            if name_ref is not None:
+                names_path = self._logs_dir() / f"inat_to_mykis_{timestamp}_namen.csv"
+                names_file = open(names_path, "w", newline="", encoding="utf-8-sig")
+                names_writer = csv.DictWriter(
+                    names_file, fieldnames=NAME_CHANGE_LOG_COLUMNS, delimiter=";"
+                )
+                names_writer.writeheader()
+
+                def name_change_func(rec: dict[str, Any]) -> None:
+                    names_writer.writerow(rec)
+                    name_records.append(rec)
+
+                self.log(f"📝 Namen-CSV: {names_path.name}")
+
             template = self.cfg.resolve_template_path()
             out_df = map_inat_to_mykis(
                 df,
@@ -492,7 +518,26 @@ class App(tk.Tk):
                 log_func=self.log,
                 log_file_func=log_to_file,
                 change_func=change_func,
+                name_change_func=name_change_func,
             )
+
+            # Zweite Namens-CSV: jeder Name (user_login) nur einmal, mit Anzahl.
+            if name_ref is not None and name_records:
+                unique_rows = dedupe_name_changes(name_records)
+                unique_path = (
+                    self._logs_dir() / f"inat_to_mykis_{timestamp}_namen_unique.csv"
+                )
+                with open(
+                    unique_path, "w", newline="", encoding="utf-8-sig"
+                ) as unique_file:
+                    unique_writer = csv.DictWriter(
+                        unique_file, fieldnames=NAME_UNIQUE_LOG_COLUMNS, delimiter=";"
+                    )
+                    unique_writer.writeheader()
+                    unique_writer.writerows(unique_rows)
+                self.log(
+                    f"📝 Eindeutige Namen: {unique_path.name} ({len(unique_rows)})"
+                )
 
             # -----------------------------------------------------------------
             # 3a. Optional: An bestehende Datei anhängen
@@ -618,3 +663,5 @@ class App(tk.Tk):
                 log_file.close()
             if changes_file is not None:
                 changes_file.close()
+            if names_file is not None:
+                names_file.close()

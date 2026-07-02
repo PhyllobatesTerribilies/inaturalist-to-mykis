@@ -16,12 +16,16 @@ dependencies = [
 dev = [
     "black>=24.0",
     "mypy>=1.10",
+    "pytest>=8.0",
     "pyinstaller>=6.0",
 ]
 
 [tool.black]
 line-length = 88
 target-version = ["py312"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
 
 [tool.mypy]
 python_version = "3.12"
