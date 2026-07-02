@@ -75,9 +75,6 @@ MYKIS_FILETYPES = [
     ("CSV (.csv)", "*.csv"),
 ]
 
-# Standard-Abstand für Grid-Widgets
-PAD: dict[str, Any] = {"padx": 10, "pady": 8}
-
 
 class App(tk.Tk):
     """Hauptfenster der Anwendung."""
@@ -89,8 +86,9 @@ class App(tk.Tk):
 
         # Fenster-Konfiguration
         self.title(f"{__app_name__} v{__version__}")
-        self.geometry("800x600")
-        self.minsize(760, 520)
+        self.geometry("840x720")
+        self.minsize(800, 620)
+        self._set_window_icon()
 
         # Variablen
         self.var_input = tk.StringVar()
@@ -109,117 +107,249 @@ class App(tk.Tk):
 
     def _add_file_row(
         self,
-        parent: ttk.Frame,
-        label_row: int,
+        parent: tk.Misc,
         label: str,
         var: tk.StringVar,
         command: Callable[[], None],
         button_text: str = "Durchsuchen…",
+        hint: str = "",
         with_clear: bool = False,
     ) -> tuple[ttk.Entry, ttk.Button]:
         """
-        Baut eine Datei-Auswahlzeile (Label + Eingabefeld + Button) ins Grid.
+        Baut einen Datei-Auswahlblock (Label + Hinweis + Eingabefeld + Button).
 
         Returns:
             (Eingabefeld, Auswahl-Button) – für Aufrufer, die sie später ändern.
         """
-        ttk.Label(parent, text=label).grid(row=label_row, column=0, sticky="w", **PAD)
+        block = ttk.Frame(parent)
+        block.pack(fill="x", padx=12, pady=(8, 0))
 
-        row = ttk.Frame(parent)
-        row.grid(row=label_row + 1, column=0, sticky="ew", **PAD)
+        ttk.Label(block, text=label, style="Field.TLabel").pack(anchor="w")
 
+        row = ttk.Frame(block)
+        row.pack(fill="x", pady=(2, 0))
         entry = ttk.Entry(row, textvariable=var)
         entry.pack(side="left", fill="x", expand=True)
-
         button = ttk.Button(row, text=button_text, command=command)
-        button.pack(side="left", padx=6)
-
+        button.pack(side="left", padx=(6, 0))
         if with_clear:
             ttk.Button(row, text="✕", width=3, command=lambda: var.set("")).pack(
-                side="left"
+                side="left", padx=(4, 0)
+            )
+
+        if hint:
+            ttk.Label(block, text=hint, style="Hint.TLabel").pack(
+                anchor="w", pady=(2, 0)
             )
         return entry, button
 
     def _build_ui(self) -> None:
         """Erstellt die Benutzeroberfläche."""
-        frm = ttk.Frame(self)
-        frm.pack(fill="both", expand=True)
+        self._init_styles()
 
-        # Datei-Auswahlzeilen
+        outer = ttk.Frame(self)
+        outer.pack(fill="both", expand=True)
+
+        self._build_header(outer)
+
+        content = ttk.Frame(outer)
+        content.pack(fill="both", expand=True)
+
+        # --- Dateien ---
+        files = ttk.LabelFrame(content, text="  Dateien  ")
+        files.pack(fill="x", padx=12, pady=(10, 0))
         self._add_file_row(
-            frm,
-            0,
-            "Eingabedatei (iNaturalist CSV/XLSX/XLS):",
+            files,
+            "iNaturalist-Export  (Pflicht)",
             self.var_input,
             self.pick_input,
+            hint="Die CSV- oder Excel-Datei aus dem iNaturalist-Export.",
         )
         self.output_entry, self.output_btn = self._add_file_row(
-            frm,
-            2,
-            "Ausgabedatei (.xls/.xlsx/.csv):",
+            files,
+            "Ziel-Datei im Mykis-Format  (Pflicht)",
             self.var_output,
             self.pick_output,
             button_text="Ziel wählen…",
+            hint=".xls wird für Mykis/Access empfohlen – auch .xlsx oder .csv möglich.",
         )
         self._add_file_row(
-            frm,
-            4,
-            "Fundortreferenz - Liste",
+            files,
+            "Fundort-Referenzliste  (optional)",
             self.var_ref,
             self.pick_ref,
-        )
-        self._add_file_row(
-            frm,
-            6,
-            "Namenszuordnungs - Liste (user_login → mykis-name):",
-            self.var_name_ref,
-            self.pick_name_ref,
+            hint="Für die MTB-Zuordnung und die Übernahme von Ortsfeldern (Ort, Kreis …).",
             with_clear=True,
         )
+        self._add_file_row(
+            files,
+            "Namensliste  (optional)",
+            self.var_name_ref,
+            self.pick_name_ref,
+            hint="Ordnet den iNaturalist-Login (user_login) einem Klarnamen zu.",
+            with_clear=True,
+        )
+        ttk.Frame(files, height=8).pack()
 
-        # -----------------------------------------------------------------
-        # Optionen
-        # -----------------------------------------------------------------
-        box = ttk.LabelFrame(frm, text="Optionen")
-        box.grid(row=8, column=0, sticky="ew", **PAD)
+        # --- Optionen ---
+        box = ttk.LabelFrame(content, text="  Optionen  ")
+        box.pack(fill="x", padx=12, pady=(12, 0))
         ttk.Checkbutton(
             box,
-            text="An bestehende Mykis-Datei anhängen (Ausgabedatei = Anhänge-Datei)",
+            text="An bestehende Mykis-Datei anhängen",
             variable=self.var_enable_append,
             command=self._toggle_append_mode,
-        ).pack(anchor="w", padx=8, pady=6)
-
+        ).pack(anchor="w", padx=10, pady=(8, 0))
+        ttk.Label(
+            box,
+            text="Die gewählte Ziel-Datei wird geladen und die neuen Zeilen angehängt.",
+            style="Hint.TLabel",
+        ).pack(anchor="w", padx=32)
         ttk.Checkbutton(
             box,
-            text="Erfasser = user_login (Ausnahme: Einträge aus Namenszuordnungs - Liste)",
+            text="Erfasser = user_login  (statt Klarname aus user_name)",
             variable=self.var_use_login_as_erfasser,
-        ).pack(anchor="w", padx=8, pady=(0, 6))
+        ).pack(anchor="w", padx=10, pady=(6, 0))
+        ttk.Label(
+            box,
+            text="Einträge aus der Namensliste haben trotzdem Vorrang.",
+            style="Hint.TLabel",
+        ).pack(anchor="w", padx=32, pady=(0, 8))
 
-        # -----------------------------------------------------------------
-        # Buttons
-        # -----------------------------------------------------------------
-        row_btn = ttk.Frame(frm)
-        row_btn.grid(row=9, column=0, sticky="e", **PAD)
-        ttk.Button(row_btn, text="Konvertieren", command=self.run_convert).pack(
-            side="right", padx=6
+        # --- Aktionen ---
+        actions = ttk.Frame(content)
+        actions.pack(fill="x", padx=12, pady=(12, 0))
+        ttk.Button(actions, text="Beenden", command=self.destroy).pack(side="right")
+        ttk.Button(
+            actions,
+            text="▶  Konvertieren",
+            command=self.run_convert,
+            style="Accent.TButton",
+        ).pack(side="right", padx=(0, 8))
+
+        # --- Protokoll ---
+        logframe = ttk.LabelFrame(content, text="  Protokoll  ")
+        logframe.pack(fill="both", expand=True, padx=12, pady=12)
+        self.txt = tk.Text(
+            logframe,
+            height=10,
+            wrap="word",
+            font=("Consolas", 9),
+            relief="flat",
+            borderwidth=0,
+            background="#fbfbfb",
+            foreground="#1f2937",
         )
-        ttk.Button(row_btn, text="Beenden", command=self.destroy).pack(side="right")
-
-        # -----------------------------------------------------------------
-        # Protokoll (Log-Fenster)
-        # -----------------------------------------------------------------
-        ttk.Label(frm, text="Protokoll:").grid(row=10, column=0, sticky="w", **PAD)
-
-        self.txt = tk.Text(frm, height=15, wrap="word", font=("Consolas", 9))
-        self.txt.grid(row=11, column=0, sticky="nsew", padx=10, pady=(0, 10))
-
-        yscroll = ttk.Scrollbar(frm, orient="vertical", command=self.txt.yview)
+        self.txt.pack(side="left", fill="both", expand=True, padx=(6, 0), pady=6)
+        yscroll = ttk.Scrollbar(logframe, orient="vertical", command=self.txt.yview)
         self.txt.configure(yscrollcommand=yscroll.set)
-        yscroll.grid(row=11, column=1, sticky="ns", pady=(0, 10))
+        yscroll.pack(side="right", fill="y", pady=6)
 
-        # Grid-Gewichte
-        frm.columnconfigure(0, weight=1)
-        frm.rowconfigure(11, weight=1)
+    # -------------------------------------------------------------------------
+    # Aussehen / Fenster-Icon
+    # -------------------------------------------------------------------------
+
+    def _init_styles(self) -> None:
+        """Setzt Theme, Farben und Fonts der Oberfläche."""
+        style = ttk.Style(self)
+        try:
+            style.theme_use("clam")
+        except tk.TclError:
+            pass
+
+        bg = "#f4f5f7"
+        header_bg = "#2e7d46"
+        hint_fg = "#6b7280"
+        self.configure(background=bg)
+
+        style.configure("TFrame", background=bg)
+        style.configure("TLabel", background=bg, font=("Segoe UI", 9))
+        style.configure("TCheckbutton", background=bg, font=("Segoe UI", 9))
+        style.configure("TButton", font=("Segoe UI", 9), padding=4)
+        style.configure("TLabelframe", background=bg)
+        style.configure(
+            "TLabelframe.Label", background=bg, font=("Segoe UI", 9, "bold")
+        )
+        style.configure("Field.TLabel", background=bg, font=("Segoe UI", 9, "bold"))
+        style.configure(
+            "Hint.TLabel", background=bg, foreground=hint_fg, font=("Segoe UI", 8)
+        )
+
+        style.configure("Header.TFrame", background=header_bg)
+        style.configure("Header.TLabel", background=header_bg)
+        style.configure(
+            "HeaderTitle.TLabel",
+            background=header_bg,
+            foreground="white",
+            font=("Segoe UI", 15, "bold"),
+        )
+        style.configure(
+            "HeaderSub.TLabel",
+            background=header_bg,
+            foreground="#cfe9d8",
+            font=("Segoe UI", 9),
+        )
+
+        style.configure("Accent.TButton", font=("Segoe UI", 10, "bold"), padding=6)
+        style.map(
+            "Accent.TButton",
+            background=[("!disabled", header_bg), ("active", "#256e3b")],
+            foreground=[("!disabled", "white")],
+        )
+
+    def _build_header(self, parent: ttk.Frame) -> None:
+        """Kopfzeile mit Logo, Titel und Version."""
+        header = ttk.Frame(parent, style="Header.TFrame", padding=(16, 12))
+        header.pack(fill="x")
+
+        logo = self._load_logo()
+        if logo is not None:
+            ttk.Label(header, image=logo, style="Header.TLabel").pack(
+                side="left", padx=(0, 14)
+            )
+
+        texts = ttk.Frame(header, style="Header.TFrame")
+        texts.pack(side="left", fill="y")
+        ttk.Label(texts, text="iNaturalist  →  Mykis", style="HeaderTitle.TLabel").pack(
+            anchor="w"
+        )
+        ttk.Label(
+            texts,
+            text=f"Beobachtungen konvertieren · v{__version__} ({__date__})",
+            style="HeaderSub.TLabel",
+        ).pack(anchor="w")
+
+    def _load_logo(self) -> tk.PhotoImage | None:
+        """Lädt das Logo (verkleinert) für die Kopfzeile; None bei Fehler."""
+        try:
+            path = self.cfg.resolve_logo_path()
+            if not path.is_file():
+                return None
+            img = tk.PhotoImage(file=str(path))
+            factor = max(1, img.height() // 56)
+            if factor > 1:
+                img = img.subsample(factor, factor)
+            self._logo_img = img  # Referenz halten (sonst Garbage Collection)
+            return img
+        except Exception:
+            return None
+
+    def _set_window_icon(self) -> None:
+        """Setzt das Fenster-/Taskleisten-Icon (best effort)."""
+        try:
+            ico = self.cfg.resolve_icon_path()
+            if ico.is_file():
+                self.iconbitmap(str(ico))  # type: ignore[no-untyped-call]
+                return
+        except Exception:
+            pass
+        try:
+            png = self.cfg.resolve_logo_path()
+            if png.is_file():
+                self._icon_img = tk.PhotoImage(file=str(png))
+                self.iconphoto(True, self._icon_img)
+        except Exception:
+            pass
 
     # -------------------------------------------------------------------------
     # Logging

@@ -13,6 +13,8 @@ class AppConfig:
     layouts_dir: Path = Path("assets")
     shapefile_mtb: Path = Path("assets/b25_utm32s/b25_utm32s.shp")
     wirt_translations: Path = Path("assets/wirt_uebersetzungen.csv")
+    app_icon: Path = Path("assets/app.ico")
+    app_logo: Path = Path("assets/inat_to_mykis_icon.png")
 
     @staticmethod
     def _project_root() -> Path:
@@ -46,3 +48,11 @@ class AppConfig:
             if external.is_file():
                 return external
         return (self._project_root() / self.wirt_translations).resolve()
+
+    def resolve_icon_path(self) -> Path:
+        """Pfad zum Fenster-Icon (.ico), ohne Existenzprüfung."""
+        return (self._project_root() / self.app_icon).resolve()
+
+    def resolve_logo_path(self) -> Path:
+        """Pfad zum Logo (.png) für Header/Icon-Fallback, ohne Existenzprüfung."""
+        return (self._project_root() / self.app_logo).resolve()
