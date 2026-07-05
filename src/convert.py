@@ -932,6 +932,22 @@ def resolve_erfasser(
 
     if name_ref_path and Path(name_ref_path).is_file():
         name_ref_df = read_any_table(Path(name_ref_path))
+        log(f"{inspect_table_header(name_ref_df)}")
+        log_file_func(
+            f"Info: Namensliste geladen: {len(name_ref_df)} Zeilen, "
+            f"{len(name_ref_df.columns)} Spalten"
+        )
+
+        cols = {str(c).strip().lower(): c for c in name_ref_df.columns}
+        if "user_login" not in cols or "mykis-name" not in cols:
+            msg = (
+                "⚠️  Namensliste hat nicht die benötigten Spalten "
+                "'user_login' und 'mykis-name' – Namenskonvertierung übersprungen."
+            )
+            log(msg)
+            log_file_func(msg)
+            return names_series
+
         name_lookup = build_name_lookup(name_ref_df)
         if name_lookup:
             login_series = copy_column(df_in, "user_login")

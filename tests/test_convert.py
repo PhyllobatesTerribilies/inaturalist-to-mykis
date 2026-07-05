@@ -271,6 +271,17 @@ def test_resolve_erfasser_name_change(tmp_path):
     ]
 
 
+def test_resolve_erfasser_falsche_spalten(tmp_path):
+    # Namensliste vorhanden, aber ohne die benötigten Spalten → Meldung + Fallback
+    ref = tmp_path / "namen.csv"
+    ref.write_text("login;klarname\nmaxm;Mustermann, Max\n", encoding="utf-8-sig")
+    df_in = pd.DataFrame({"user_name": ["Max Mustermann"], "user_login": ["maxm"]})
+    logs: list[str] = []
+    result = resolve_erfasser(df_in, str(ref), False, logs.append, logs.append)
+    assert list(result) == ["Mustermann, Max"]  # unveränderter Fallback
+    assert any("benötigten Spalten" in m for m in logs)
+
+
 def test_dedupe_name_changes():
     records = [
         {

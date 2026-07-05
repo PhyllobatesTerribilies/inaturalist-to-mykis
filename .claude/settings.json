@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(./venv/Scripts/black.exe src *)",
+      "Bash(./venv/Scripts/mypy.exe src *)",
+      "Bash(./venv/Scripts/python.exe -X utf8 -c ' *)"
+    ]
+  }
+}
