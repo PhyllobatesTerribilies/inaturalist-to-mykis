@@ -97,6 +97,7 @@ class App(tk.Tk):
         self.var_ref = tk.StringVar()
         self.var_name_ref = tk.StringVar()
         self.var_use_login_as_erfasser = tk.BooleanVar(value=False)
+        self.var_filter_obscured = tk.BooleanVar(value=False)
 
         # GUI aufbauen
         self._build_ui()
@@ -205,6 +206,17 @@ class App(tk.Tk):
         ttk.Label(
             outer,
             text="Einträge aus der Namensliste haben trotzdem Vorrang.",
+            style="Hint.TLabel",
+        ).pack(anchor="w", padx=38)
+        ttk.Checkbutton(
+            outer,
+            text="Versteckte Standorte aussortieren  (geoprivacy = obscured)",
+            variable=self.var_filter_obscured,
+        ).pack(anchor="w", padx=16, pady=(8, 0))
+        ttk.Label(
+            outer,
+            text="Bei obscured verschleiert iNaturalist die Koordinaten – diese "
+            "Beobachtungen werden übersprungen (im Log vermerkt).",
             style="Hint.TLabel",
         ).pack(anchor="w", padx=38)
 
@@ -496,6 +508,7 @@ class App(tk.Tk):
         name_ref = self.var_name_ref.get().strip() or None
         use_login_as_erfasser = bool(self.var_use_login_as_erfasser.get())
         enable_append = bool(self.var_enable_append.get())
+        filter_obscured = bool(self.var_filter_obscured.get())
 
         # Validierung
         if not inp:
@@ -522,6 +535,7 @@ class App(tk.Tk):
                 Path(ref) if ref else None,
                 Path(name_ref) if name_ref else None,
                 use_login_as_erfasser,
+                filter_obscured,
             ),
             daemon=True,
         ).start()
@@ -534,6 +548,7 @@ class App(tk.Tk):
         ref: Path | None = None,
         name_ref: Path | None = None,
         use_login_as_erfasser: bool = False,
+        filter_obscured: bool = False,
     ) -> None:
         """
         Führt Konvertierung durch (läuft in separatem Thread).
@@ -545,6 +560,7 @@ class App(tk.Tk):
             ref: Optionale Fundort-Referenzdatei (MTB-Abgleich)
             name_ref: Optionale Namenszuordnungs-Datei (user_login → mykis-name)
             use_login_as_erfasser: Wenn True, wird user_login als Erfasser übernommen
+            filter_obscured: Wenn True, werden geoprivacy="obscured"-Zeilen aussortiert
         """
         log_file: TextIO | None = None
         changes_file: TextIO | None = None
@@ -648,6 +664,7 @@ class App(tk.Tk):
                 mtb_reference_path=str(ref) if ref else None,
                 name_ref_path=str(name_ref) if name_ref else None,
                 use_login_as_erfasser=use_login_as_erfasser,
+                filter_obscured=filter_obscured,
                 log_func=self.log,
                 log_file_func=log_to_file,
                 change_func=change_func,

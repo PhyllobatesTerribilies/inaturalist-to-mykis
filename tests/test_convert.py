@@ -12,9 +12,12 @@ from src.convert import (
     _build_reference_map,
     _compute_mtbq,
     build_name_lookup,
+    build_wirt_series,
     dedupe_name_changes,
     extract_basis_ort,
     extract_name,
+    filter_by_erfassung,
+    filter_by_geoprivacy,
     normalize_german_states,
     parse_coord_no_separator,
     resolve_erfasser,
@@ -280,6 +283,80 @@ def test_resolve_erfasser_falsche_spalten(tmp_path):
     result = resolve_erfasser(df_in, str(ref), False, logs.append, logs.append)
     assert list(result) == ["Mustermann, Max"]  # unveränderter Fallback
     assert any("benötigten Spalten" in m for m in logs)
+
+
+def test_filter_by_erfassung_nur_ja():
+    df = pd.DataFrame(
+        {
+            "field:mykis-erfassung": ["", "ja", "nein", "vielleicht", "Yes"],
+            "id": [1, 2, 3, 4, 5],
+            "scientific_name": ["A", "B", "C", "D", "E"],
+        }
+    )
+    gui: list[str] = []
+    datei: list[str] = []
+    result = filter_by_erfassung(df, gui.append, datei.append)
+
+    # nur Ja/Yes raus (id 2 und 5); leer, Nein, sonstiges bleiben
+    assert list(result["id"]) == [1, 3, 4]
+
+    # Log-Datei listet jede übersprungene Zeile einzeln auf
+    prefix = "Erfassungs-Filter (bereits erfasst)"
+    per_row = [m for m in datei if m.startswith(prefix)]
+    assert len(per_row) == 2
+    assert any("[1]: 2 / B" in m for m in per_row)
+    assert any("[4]: 5 / E" in m for m in per_row)
+
+    # GUI-Protokoll bekommt nur die Zusammenfassung, keine Einzelzeilen
+    assert not any(m.startswith(prefix) for m in gui)
+
+
+def test_build_wirt_series_logging():
+    # coleoptera → KÄFER (übersetzt); "Boletus" → "Boletus sp." (Gattung);
+    # "Quercus robur" bleibt unverändert (zwei Wörter, nicht in Tabelle)
+    df = pd.DataFrame(
+        {"field:mykis-substrat/-wirt": ["coleoptera", "Boletus", "Quercus robur", ""]}
+    )
+    datei: list[str] = []
+    result = build_wirt_series(df, datei.append)
+
+    assert list(result) == ["KÄFER", "Boletus sp.", "Quercus robur", ""]
+
+    log_lines = [m for m in datei if m.startswith("Wirt-Konvertierung")]
+    assert len(log_lines) == 2  # nur die 2 geänderten Zeilen
+    assert any("[0]: 'coleoptera' → 'KÄFER'" in m for m in log_lines)
+    assert any("[1]: 'Boletus' → 'Boletus sp.'" in m for m in log_lines)
+
+
+def test_filter_by_geoprivacy_nur_obscured():
+    df = pd.DataFrame(
+        {
+            "geoprivacy": ["open", "obscured", "", "private", "Obscured"],
+            "id": [1, 2, 3, 4, 5],
+            "scientific_name": ["A", "B", "C", "D", "E"],
+        }
+    )
+    gui: list[str] = []
+    datei: list[str] = []
+    result = filter_by_geoprivacy(df, gui.append, datei.append)
+
+    # nur obscured raus (id 2 und 5, case-insensitiv); Rest bleibt
+    assert list(result["id"]) == [1, 3, 4]
+
+    per_row = [m for m in datei if m.startswith("Standort-Filter (obscured)")]
+    assert len(per_row) == 2
+    assert any("[1]: 2 / B" in m for m in per_row)
+    assert any("[4]: 5 / E" in m for m in per_row)
+    # GUI bekommt nur die Zusammenfassung
+    assert not any(m.startswith("Standort-Filter (obscured)") for m in gui)
+
+
+def test_filter_by_geoprivacy_ohne_spalte():
+    df = pd.DataFrame({"id": [1, 2]})
+    logs: list[str] = []
+    result = filter_by_geoprivacy(df, logs.append, logs.append)
+    assert len(result) == 2  # nichts gefiltert
+    assert any("nicht gefunden" in m for m in logs)
 
 
 def test_dedupe_name_changes():

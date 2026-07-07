@@ -443,43 +443,125 @@ def normalize_german_states(series: pd.Series) -> pd.Series:
 
 
 def filter_by_erfassung(
-    df_in: pd.DataFrame, log_func: Optional[Callable[[str], None]] = None
+    df_in: pd.DataFrame,
+    log_func: Optional[Callable[[str], None]] = None,
+    log_file_func: Optional[Callable[[str], None]] = None,
 ) -> pd.DataFrame:
     """
-    Filtert bereits erfasste Beobachtungen.
+    Sortiert bereits erfasste Beobachtungen aus.
+
+    Es werden **nur** Zeilen mit Erfassung = "Ja"/"Yes" entfernt; alle anderen
+    (leer, "Nein"/"No" oder sonstiger Text) bleiben erhalten.
 
     Args:
         df_in: Input DataFrame
-        log_func: Logging-Funktion, die einen String nimmt und nichts zurückgibt
+        log_func: Logging der Zusammenfassung (z.B. GUI-Protokoll)
+        log_file_func: Logging in die Log-Datei – erhält die Zusammenfassung und
+            zusätzlich jede einzelne übersprungene Zeile
 
     Returns:
-        Gefilterter DataFrame (nur leere Erfassung-Zeilen)
+        Gefilterter DataFrame (ohne Ja/Yes-Zeilen)
     """
     erfassung_column = "field:mykis-erfassung"
     log = make_logger(log_func)
+    log_file = make_logger(log_file_func)
+
+    def summary(msg: str) -> None:
+        """Zusammenfassung – geht ins GUI-Protokoll und in die Log-Datei."""
+        log(msg)
+        log_file(msg)
 
     if erfassung_column not in df_in.columns:
-        log("⚠️  Erfassung-Spalte nicht gefunden - keine Filterung")
+        summary("⚠️  Erfassung-Spalte nicht gefunden - keine Filterung")
         return df_in.copy()
 
     series = df_in[erfassung_column].fillna("").astype(str).str.strip().str.lower()
-    yes_count = series.isin(["ja", "yes"]).sum()
-    no_count = series.isin(["nein", "no"]).sum()
-    empty_count = (series == "").sum()
-    other_count = len(df_in) - yes_count - no_count - empty_count
+    is_erfasst = series.isin(["ja", "yes"])
+    removed_count = int(is_erfasst.sum())
+    kept_count = len(df_in) - removed_count
 
-    df_filtered = df_in[series == ""].copy()
+    df_filtered = df_in[~is_erfasst].copy()
 
-    log("")
-    log(f"📊 Erfassung-Filter: Von {len(df_in)} Beobachtungen:")
-    log(f"   ✅ {empty_count} noch nicht erfasst → werden verarbeitet")
-    if yes_count > 0:
-        log(f"   ❌ {yes_count} bereits erfasst (Ja) → übersprungen")
-    if no_count > 0:
-        log(f"   ❌ {no_count} abgelehnt (Nein) → übersprungen")
-    if other_count > 0:
-        log(f"   ⚠️  {other_count} mit sonstigem Text → übersprungen")
+    summary("")
+    summary(f"📊 Erfassung-Filter: Von {len(df_in)} Beobachtungen:")
+    summary(f"   ✅ {kept_count} werden verarbeitet")
+    summary(f"   ⏭️  {removed_count} bereits erfasst (Ja) → übersprungen")
 
+    # Jede übersprungene Zeile einzeln – nur in die Log-Datei, nicht ins GUI.
+    for idx in df_in.index[is_erfasst]:
+        teile = []
+        if "id" in df_in.columns:
+            obs_id = df_in.at[idx, "id"]
+            if pd.notna(obs_id) and str(obs_id).strip():
+                teile.append(str(obs_id))
+        taxon = extract_taxon(df_in.loc[idx])
+        if taxon:
+            teile.append(taxon)
+        log_file(f"Erfassungs-Filter (bereits erfasst) [{idx}]: {' / '.join(teile)}")
+
+    log_file(f" ")
+    return df_filtered
+
+
+def filter_by_geoprivacy(
+    df_in: pd.DataFrame,
+    log_func: Optional[Callable[[str], None]] = None,
+    log_file_func: Optional[Callable[[str], None]] = None,
+) -> pd.DataFrame:
+    """
+    Sortiert Beobachtungen mit unscharfem Standort aus (geoprivacy = "obscured").
+
+    Bei "obscured" verschleiert iNaturalist die Koordinaten – sie sind für die
+    MTB-Zuordnung unbrauchbar. Nur "obscured" wird entfernt; alle anderen Werte
+    (open, private, leer) bleiben erhalten.
+
+    Args:
+        df_in: Input DataFrame
+        log_func: Logging der Zusammenfassung (z.B. GUI-Protokoll)
+        log_file_func: Logging in die Log-Datei – erhält die Zusammenfassung und
+            zusätzlich jede einzelne übersprungene Zeile
+
+    Returns:
+        Gefilterter DataFrame (ohne obscured-Zeilen)
+    """
+    geoprivacy_column = "geoprivacy"
+    log = make_logger(log_func)
+    log_file = make_logger(log_file_func)
+
+    def summary(msg: str) -> None:
+        """Zusammenfassung – geht ins GUI-Protokoll und in die Log-Datei."""
+        log(msg)
+        log_file(msg)
+
+    if geoprivacy_column not in df_in.columns:
+        summary("⚠️  Spalte 'geoprivacy' nicht gefunden – kein Standort-Filter")
+        return df_in.copy()
+
+    series = df_in[geoprivacy_column].fillna("").astype(str).str.strip().str.lower()
+    is_obscured = series == "obscured"
+    removed_count = int(is_obscured.sum())
+    kept_count = len(df_in) - removed_count
+
+    df_filtered = df_in[~is_obscured].copy()
+
+    summary("")
+    summary(f"📊 Standort-Filter (geoprivacy): Von {len(df_in)} Beobachtungen:")
+    summary(f"   ✅ {kept_count} werden verarbeitet")
+    summary(f"   ⏭️  {removed_count} mit unscharfem Standort (obscured) → übersprungen")
+
+    # Jede übersprungene Zeile einzeln – nur in die Log-Datei, nicht ins GUI.
+    for idx in df_in.index[is_obscured]:
+        teile = []
+        if "id" in df_in.columns:
+            obs_id = df_in.at[idx, "id"]
+            if pd.notna(obs_id) and str(obs_id).strip():
+                teile.append(str(obs_id))
+        taxon = extract_taxon(df_in.loc[idx])
+        if taxon:
+            teile.append(taxon)
+        log_file(f"Standort-Filter (obscured) [{idx}]: {' / '.join(teile)}")
+
+    log_file(f" ")
     return df_filtered
 
 
@@ -581,6 +663,7 @@ def _build_reference_map(
             f"Warnung: {len(no_quadrant)} Referenz-Einträge ohne Quadrant werden "
             f"keinem Fund zugeordnet (z.B. {beispiele})"
         )
+    log_file_func(f" ")
     return ref_map, mtb_col
 
 
@@ -727,14 +810,27 @@ def convert_location_to_mtbq64(
     ref_map, mtb_col = _build_reference_map(mtb_ref_df, log_file_func)
 
     match_count = 0
+    outside_count = 0
+    missing_count = 0
     for row_idx, row in df.iterrows():
-        point = Point(row["ostwert2"], row["nordwert2"])
+        ost, nord = row["ostwert2"], row["nordwert2"]
+        point = Point(ost, nord)
         sheets = _find_tk25_sheets(point, tk25)
 
         if sheets.empty:
-            log_file_func(
-                f"Fundort[{row_idx}] von INaturalist Liste nicht innerhalb der Topographischen Karte Deutschland TK25"
-            )
+            if pd.isna(ost) or pd.isna(nord):
+                missing_count += 1
+                log_file_func(
+                    f"Fundort[{row_idx}] Fehler: keine gültige Koordinate "
+                    f"(Ostwert={ost}, Nordwert={nord}) – keine MTB-Zuordnung"
+                )
+            else:
+                outside_count += 1
+                log_file_func(
+                    f"Fundort[{row_idx}] Fehler: Koordinate (Ostwert={ost}, "
+                    f"Nordwert={nord}) liegt nicht in Deutschland (außerhalb der "
+                    f"TK25) – keine MTB-Zuordnung"
+                )
             continue
 
         if len(sheets) > 1:
@@ -743,9 +839,7 @@ def convert_location_to_mtbq64(
             )
 
         sheet = sheets.iloc[0]
-        mtbq64, mtbq16 = _compute_mtbq(
-            sheet.geometry.bounds, row["ostwert2"], row["nordwert2"], sheet["id"]
-        )
+        mtbq64, mtbq16 = _compute_mtbq(sheet.geometry.bounds, ost, nord, sheet["id"])
         df.at[row_idx, "MTB"] = mtbq64
 
         if mtb_col is not None and mtbq16 in ref_map:
@@ -763,6 +857,15 @@ def convert_location_to_mtbq64(
             )
 
     log_file_func(f"Fundort-Zuordnung: {match_count} wurde zugeordnet")
+    if outside_count:
+        log_file_func(
+            f"Fundort-Zuordnung: {outside_count} Fundort(e) außerhalb Deutschlands "
+            f"(außerhalb TK25) – keine MTB-Zuordnung"
+        )
+    if missing_count:
+        log_file_func(
+            f"Fundort-Zuordnung: {missing_count} Fundort(e) ohne gültige Koordinate"
+        )
 
 
 def parse_coord_no_separator(
@@ -988,6 +1091,7 @@ def resolve_erfasser(
     elif name_ref_path:
         log(f"⚠️  Namenskonvertierungs-Datei nicht gefunden: {name_ref_path}")
 
+    log_file_func(f" ")
     return names_series
 
 
@@ -1070,7 +1174,11 @@ def map_coordinates(
     assign_if_exists(out_df, "Ungenauigkeit", ungenauigkeit)
 
 
-def map_custom_fields(df_in: pd.DataFrame, out_df: pd.DataFrame) -> None:
+def map_custom_fields(
+    df_in: pd.DataFrame,
+    out_df: pd.DataFrame,
+    log_file_func: Callable[[str], None],
+) -> None:
     """Schreibt die Mykis-Custom-Fields (Substrat, Wuchsstelle, Wirt …)."""
     assign_if_exists(
         out_df, "organ_substrat", copy_column(df_in, "field:mykis-substrat_organ")
@@ -1089,16 +1197,26 @@ def map_custom_fields(df_in: pd.DataFrame, out_df: pd.DataFrame) -> None:
     assign_if_exists(
         out_df, "art_bemerkung", copy_column(df_in, "field:mykis-bemerkung")
     )
-    assign_if_exists(out_df, "Wirt", build_wirt_series(df_in))
+    assign_if_exists(out_df, "Wirt", build_wirt_series(df_in, log_file_func))
+    assign_if_exists(out_df, "verbleib", copy_column(df_in, "field:mykis-verbleib"))
+    assign_if_exists(out_df, "beleg_nr", copy_column(df_in, "field:mykis-beleg-nr"))
 
 
-def build_wirt_series(df_in: pd.DataFrame) -> pd.Series:
-    """Übersetzt den Wirts-Namen und ergänzt ' sp.' bei einzelnen Gattungen."""
+def build_wirt_series(
+    df_in: pd.DataFrame,
+    log_file_func: Optional[Callable[[str], None]] = None,
+) -> pd.Series:
+    """
+    Übersetzt den Wirts-Namen und ergänzt ' sp.' bei einzelnen Gattungen.
+
+    ``log_file_func`` erhält – falls gesetzt – pro tatsächlich geändertem Wirt
+    eine Zeile (alt → neu) für die Log-Datei.
+    """
     uebersetzungen = load_wirt_uebersetzungen()
-    wirt_col = copy_column(df_in, "field:mykis-substrat/-wirt").str.strip()
-    wirt_lower = wirt_col.str.lower()
+    original = copy_column(df_in, "field:mykis-substrat/-wirt").str.strip()
+    wirt_lower = original.str.lower()
     was_translated = wirt_lower.isin(uebersetzungen)
-    wirt_col = wirt_col.where(~was_translated, wirt_lower.map(uebersetzungen))
+    wirt_col = original.where(~was_translated, wirt_lower.map(uebersetzungen))
     # Einzelnes Wort (Gattung ohne Art) → " sp." anhängen
     is_genus = (
         wirt_col.notna()
@@ -1106,7 +1224,18 @@ def build_wirt_series(df_in: pd.DataFrame) -> pd.Series:
         & ~wirt_col.str.contains(" ")
         & ~was_translated
     )
-    return wirt_col.where(~is_genus, wirt_col + " sp.")
+    result = wirt_col.where(~is_genus, wirt_col + " sp.")
+
+    # Detail-Log: jede tatsächlich geänderte Wirt-Angabe (nur Log-Datei)
+    if log_file_func is not None:
+        changed = (original != "") & (original != result)
+        for idx in df_in.index[changed]:
+            log_file_func(
+                f"Wirt-Konvertierung [{idx}]: '{original.at[idx]}' → '{result.at[idx]}'"
+            )
+        log_file_func("")
+
+    return result
 
 
 def map_collector_determiner(
@@ -1152,6 +1281,7 @@ def map_quality(
     apply_fallback = (qualitaet_id == "") & has_sequence
     qualitaet_id = qualitaet_id.where(~apply_fallback, QUALITAET_IDS["sequenziert"])
 
+    log_file_func(f" ")
     out_df[quality_column] = qualitaet_id
 
 
@@ -1168,6 +1298,7 @@ def map_inat_to_mykis(
     mtb_reference_path: str | None = None,
     name_ref_path: str | None = None,
     use_login_as_erfasser: bool = False,
+    filter_obscured: bool = False,
     log_func: Optional[Callable[[str], None]] = None,
     change_func: Optional[Callable[[dict[str, Any]], None]] = None,
     name_change_func: Optional[Callable[[dict[str, Any]], None]] = None,
@@ -1183,6 +1314,7 @@ def map_inat_to_mykis(
         mtb_reference_path: optionale Fundort-Referenzdatei (MTB-Abgleich)
         name_ref_path: optionale Namenszuordnungs-Liste (user_login → mykis-name)
         use_login_as_erfasser: user_login unverändert als Erfasser übernehmen
+        filter_obscured: Beobachtungen mit geoprivacy = "obscured" aussortieren
         log_func: Logging ins GUI-Protokoll (Fallback: print)
         change_func: optionaler Callback für die Änderungs-CSV der
             Fundort-Zuordnung (Datensatz-Schema: CHANGE_LOG_COLUMNS)
@@ -1195,11 +1327,16 @@ def map_inat_to_mykis(
     log_file_func("=== Start Konvertierung iNaturalist → Mykis ===")
     log = make_logger(log_func)
 
-    # 1. Bereits erfasste Zeilen herausfiltern
-    df_in = filter_by_erfassung(df_in, log)
+    # 1. Nur bereits erfasste (Ja) Zeilen aussortieren; Details in die Log-Datei
+    df_in = filter_by_erfassung(df_in, log, log_file_func)
+
+    # 1b. Optional: unscharfe Standorte (geoprivacy = "obscured") aussortieren
+    if filter_obscured:
+        df_in = filter_by_geoprivacy(df_in, log, log_file_func)
+
     if len(df_in) == 0:
         log("❌ FEHLER: Keine Zeilen zum Verarbeiten übrig!")
-        log("   Alle Beobachtungen wurden bereits erfasst.\n")
+        log("   Alle Beobachtungen wurden bereits erfasst/gefiltert.\n")
         return pd.DataFrame()
 
     # 2. Template (Spaltendefinition) und Fundort-Referenz laden
@@ -1235,7 +1372,7 @@ def map_inat_to_mykis(
 
     map_locations(df_in, out_df)
     map_coordinates(df_in, out_df, log_file_func)
-    map_custom_fields(df_in, out_df)
+    map_custom_fields(df_in, out_df, log_file_func)
     map_collector_determiner(df_in, out_df, names_series)
     map_quality(df_in, out_df, log_file_func)
 
