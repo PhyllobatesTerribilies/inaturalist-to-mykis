@@ -1249,10 +1249,20 @@ pre[class*="language-"] {
 </head>
 <body>
   <article class="markdown-body"><h1 class="atx" id="dokumentation--inaturalist-to-mykis">Dokumentation – inaturalist-to-mykis</h1>
-<p><strong>Version:</strong> 0.10.0<br><strong>Datum:</strong> 2026-05-18</p>
+<p><strong>Version:</strong> 0.12.0<br><strong>Datum:</strong> 2026-07-07</p>
 <hr>
 <h2 class="atx" id="1-einleitung">1. Einleitung</h2>
 <p>Das Programm inaturalist-to-mykis konvertiert Pilzbeobachtungen von iNaturalist in ein Format, das direkt in MykIS importiert werden kann. Dabei werden vordefinierte Spalten einer exportierten iNaturalist-Datei in das kompatible MykIS-Dateiformat überführt.</p>
+<p>Funktionen:</p>
+<ul>
+<li>Konvertierung der Daten</li>
+<li>Erfassung Filter (field:mykis-erfassung)</li>
+<li>Standort Filter (geoprivacy = obscured)</li>
+<li>Koordinaten umwandlung in MTB 16tel</li>
+<li>Namenszuordnung</li>
+<li>Fundort Zuordnung</li>
+<li>Log Datei</li>
+</ul>
 <h3 class="atx" id="details-zum-dateiformat">Details zum Dateiformat</h3>
 <p>Referenzformat: mykdaten.xls
 Layout: Die verwendete Vorlage für das Programm findet man unter <a href="https://github.com/PhyllobatesTerribilies/inaturalist-to-mykis/tree/master/assets">2026-02-07_layout_mykdaten.xls</a>.</p>
@@ -1274,7 +1284,7 @@ Layout: Die verwendete Vorlage für das Programm findet man unter <a href="https
 <pre><code class="fenced-code-block">Doppelklick auf: inaturalist-to-mykis.exe</code></pre>
 <h3 class="atx" id="22-hauptfenster">2.2 Hauptfenster</h3>
 <p>Nach dem ausführen des Programms öffnet sich folgendes Fenster:</p>
-<p><img alt="" src="file:///C:/Users/Julian%20Grausgruber/AppData/Roaming/marktext/images/2026-05-18-12-04-38-image.png"><strong>Legende:</strong></p>
+<p><img alt="" src="file:///C:/Users/Julian%20Grausgruber/AppData/Roaming/marktext/images/2026-07-07-20-55-10-image.png"><strong>Legende:</strong></p>
 <ul>
 <li>GRÜN <strong>Eingabefeld:</strong> iNaturalist-Exportdatei</li>
 <li>ROT <strong>Ausgabefeld:</strong> Konvertierte Datei bzw bestehende Datei (mykdate.xls)</li>
@@ -1404,7 +1414,7 @@ INFO: Tabelle eingelesen
 <p><strong>Schritt 3:</strong> Konvertieren</p>
 <ul>
 <li>Die neuen Datensätze werden jetzt mit der Referenz Fundortliste überprüft. Bei Übereinstimmung mit den 16tel Quadranten, werden vordefinierte Spalten des Refernzdatensatzes auf den neuen Datensatz kopiert.</li>
-<li>Mehr Information zu der Fundortzurordnung findest man hier. <a href="#44-fundort-zurodnung">Fundortzurordnung</a></li>
+<li>Mehr Information zu der Fundortzuordnung findest man hier. <a href="#44-fundort-zuordnung">Fundortzuordnung</a></li>
 </ul>
 <h2 class="atx" id="34-namenszuordnung">3.4 Namenszuordnung</h2>
 <p><strong>Schritt 1:</strong> Eingabedatei und Ausgabedatei wählen</p>
@@ -1617,11 +1627,16 @@ Wenn das Feld "field:mykis-erfassung" in der Datei vorhanden ist,  wird jede Zei
 <td></td>
 </tr>
 </tbody></table>
-<h2 class="atx" id="44-fundort-zurodnung">4.4 Fundort Zurodnung</h2>
-<p>Die Fundort Zurodnung ist nur aktiv, solange eine Datei als Fundort Zuodrnungs Liste hinterlegt ist.</p>
-<p>Wenn ein Fundort im gleichen 16tel Quadranten liegt, wie ein bestehendert Fundort in der Fundort Zurodnungs Liste, dann werden diese Daten auf den Neunen übertragen.
-Wenn es mehrere bestehende Fundort in der Fundort Zuordnungs Liste vorhanden sind, werden die Daten des Nähesten auf den neuen Fundort übertragen.</p>
-<p>Folgende Daten werden übertrage:</p>
+<h3 class="atx" id="44-fundort-zuordnung">4.4 Fundort Zuordnung</h3>
+<p>Die Fundort-Zuordnung ist nur aktiv, wenn eine Fundort-Referenzliste ausgewählt ist. Diese Liste braucht die Spalten <code>mtb</code>, <code>ostwert2</code> und <code>nordwert2</code>.</p>
+<p><strong>So funktioniert es:</strong> Für jeden neuen Fundort wird aus den Koordinaten der <strong>16tel-Quadrant</strong> bestimmt (z. B. <code>1626,34</code>). Liegt in der Referenzliste ein Fundort im selben 16tel-Quadranten, werden dessen Daten übernommen. Passen mehrere, gewinnt der <strong>nächstgelegene</strong> (nach <code>ostwert2</code>/<code>nordwert2</code>).</p>
+<blockquote>
+<p>⚠️ Referenz-Fundorte <strong>ohne</strong> Koordinaten werden nicht verwendet – die Referenzliste sollte immer <code>ostwert2</code>/<code>nordwert2</code> enthalten.</p>
+</blockquote>
+<p>Fällt eine Beobachtung in einen 16tel-Quadranten, für den es zwar Referenz-Einträge gibt, aber <strong>keiner davon Koordinaten</strong> hat, erscheint in der Log-Datei z. B.:</p>
+<p><code>Fundort-Zuordnung:[25] --&gt; Error: Keiner der Referenz 16tel Quadranten [3647,24] hat Geokoordinaten (ostwert2,nordwert2)</code></p>
+<p>Das bedeutet: Für diese Beobachtung (Index 25) konnte im Quadranten <code>3647,24</code> kein Referenz-Fundort ausgewählt werden – es wird nichts übertragen.</p>
+<p>Folgende Daten werden übertragen:</p>
 <ul>
 <li>BASIS_ort</li>
 <li>BASIS_ortslage</li>
@@ -1633,7 +1648,33 @@ Wenn es mehrere bestehende Fundort in der Fundort Zuordnungs Liste vorhanden sin
 <li>ozeanitaet</li>
 <li>zonalitaet</li>
 </ul>
-<p>Die originalen Geokoordianten des neuen Fundortes werden auch gelöscht.</p>
+<p>Die originalen Geokoordinaten des neuen Fundortes (<code>ostwert2</code>/<code>nordwert2</code>) werden dabei gelöscht – der Fundort wird stattdessen über das MTB verortet.</p>
+<h4 class="atx" id="mtb-wert-in-der-referenzliste">MTB-Wert in der Referenzliste</h4>
+<p>Der <code>mtb</code>-Wert muss den Quadranten enthalten – mindestens den 16tel-Quadranten. Ein Wert <strong>ohne Komma</strong> (nur die Blatt-Nummer) wird aktuell <strong>nicht</strong> zugeordnet. Ein Punkt (<code>.</code>) zählt wie ein Komma.</p>
+<table>
+<thead>
+<tr>
+<th><code>mtb</code></th>
+<th>Wird zugeordnet?</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>1626,342</code> (64tel-Quadrant)</td>
+<td>✅ ja</td>
+</tr>
+<tr>
+<td><code>1626,34</code> (16tel-Quadrant)</td>
+<td>✅ ja</td>
+</tr>
+<tr>
+<td><code>1626.34</code> (Punkt statt Komma)</td>
+<td>✅ ja</td>
+</tr>
+<tr>
+<td><code>1626</code> (ohne Komma)</td>
+<td>❌ nein</td>
+</tr>
+</tbody></table>
 <h3 class="atx" id="45-namenszuordnung">4.5 Namenszuordnung</h3>
 <p>Die Namenszurodnung ist nur aktiv, solange eine Datei als Namenszuodrnungs Liste hinterlegt ist.</p>
 <p>Folgende Spalten muss in der Datei vorhanden sein:</p>
@@ -1755,40 +1796,139 @@ Wenn es mehrere bestehende Fundort in der Fundort Zuordnungs Liste vorhanden sin
 <td>Wildkaninchen</td>
 </tr>
 </tbody></table>
-<h2 class="atx" id="5-log">5. Log</h2>
-<p>Das Programm erzeugt bei jeder Konvertierung ein Log Datei mit einem Datum, diese kann verwendet werden um noch genauere Details über die Fundortzurodnung zu bekommen.
-Es wird Details über die Referenz Fundort Datei ausgegeben wie z.b: Anzahl an Refernz Datensätze oder auch die "mtb" Spalte gefunden wurde oder auch wie viele verschiede 16tel Quadranten es gibt. 
-Es wird in der Datei auch jede Fundortzuordnung aufgelistet.</p>
-<p>z.b: Fundort-Zuordnung:[0] --&gt; Das bedeutet der Index 0 in der iNaturalist Datei wurde wie angegeben verwändert.
-'BASIS_ortslage: 'iNaturalist' → 'OT Hasseldieksdamm Hofholz'
-Das heißt die BASIS_ortslage wurde auf OT Hasseldieksdamm Hofholz geändert.</p>
-<p>Bei jeder Konvertierung erstellt das Programm automatisch eine Log-Datei mit Zeitstempel. Diese Datei dient der Qualitätssicherung und liefert detaillierte Informationen darüber, wie die Fundortdaten verarbeitet und zugeordnet wurden.</p>
-<h3 class="atx" id="inhalte-der-log-datei">Inhalte der Log-Datei</h3>
-<p>Das Protokoll gibt Aufschluss über folgende Punkte:</p>
-<ul>
-<li>Anzahl der geladenen Referenz-Datensätze.</li>
-<li>Bestätigung, ob die benötigte MTB-Spalte (Messtischblatt) gefunden wurde.</li>
-<li>Statistiken über die geografische Abdeckung (z. B. Anzahl der verschiedenen 16tel-Quadranten).</li>
-<li>Status der geladenen Shapefiles für die geografische Validierung.</li>
-<li>Detaillierte Fundort-Zuordnung</li>
-</ul>
-<h4 class="atx" id="detaillierte-fundort-zuordnung">Detaillierte Fundort-Zuordnung</h4>
-<p>Ein Eintrag wie <code>Fundort-Zuordnung:[0]</code> bedeutet, dass der Datensatz mit dem Index 0 (Der Index muss immer +2 gerechnet werden für die exakte Excel Zeile) aus der iNaturalist-Quelldatei verarbeitet wurde. Die Pfeile (<code>→</code>) zeigen dabei die Transformation der Daten an:</p>
 <blockquote>
-<p><strong>Beispiel:</strong> <code>BASIS_ortslage: 'iNaturalist' → 'OT Hasseldieksdamm Hofholz'</code><br>Hier wurde der Name <code>iNaturalist</code> durch die Ortsbezeichnung aus der Referenzdatei ersetzt.</p>
+<p><strong>💡 Eigene Wirte ergänzen:</strong> Die Übersetzungstabelle ist eine bearbeitbare Datei – <code>assets/wirt_uebersetzungen.csv</code> (in der gepackten App unter <code>…\_internal\assets\</code>). Einfach in Excel öffnen, neue Zeilen im Format <code>iNaturalist-Name;Mykis-Bezeichnung</code> ergänzen und speichern. Die Änderungen greifen beim nächsten Konvertieren – ohne Code-Anpassung und ohne Neustart. Fehlt die Datei, verwendet das Programm die oben gezeigten Standardwerte.</p>
 </blockquote>
-<p><strong>Beispiel Log</strong></p>
-<pre><code class="fenced-code-block">Start inat to mykis convertation
-Info: Referenzdatei ausgewählt C:\workspace\INaturlist_Mykis_Konvertierung\Testdaten\MTB\fundorte_sh.xlsx
-Info: Referenzdatei geladen: 5808 Spalten
+<h6 class="atx" id="45-qualitat">4.5 Qualität</h6>
+<p>Das Feld <code>field:mykis-qualität</code> aus dem iNaturalist-Export wird über folgende Tabelle in die Mykis-Qualitäts-ID umgewandelt:</p>
+<table>
+<thead>
+<tr>
+<th>iNaturalist-Wert</th>
+<th>Mykis-ID</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>unsicher</td>
+<td>1</td>
+</tr>
+<tr>
+<td>mikroskopiert</td>
+<td>2</td>
+</tr>
+<tr>
+<td>gesichert</td>
+<td>4</td>
+</tr>
+<tr>
+<td>plausibel</td>
+<td>5</td>
+</tr>
+<tr>
+<td>Literaturdaten</td>
+<td>6</td>
+</tr>
+<tr>
+<td>sequenziert</td>
+<td>7</td>
+</tr>
+<tr>
+<td>mikroskopiert + sequenziert</td>
+<td>8</td>
+</tr>
+</tbody></table>
+<p><strong>Fallback:</strong> Ist <code>field:mykis-qualität</code> leer, aber <code>field:mykis-its-sequenz</code> oder <code>field:dna barcode its:</code> gefüllt, wird automatisch ID <code>7</code> (sequenziert) gesetzt.</p>
+<p><strong>Unbekannte Werte:</strong> Steht ein nicht gelisteter Text im Feld (z. B. Tippfehler), bleibt die Zelle leer und es wird eine Zeile ins Log geschrieben (<code>Qualität[idx]: unbekannter Wert '...' wird ignoriert</code>).</p>
+<h2 class="atx" id="5-log">5. Log</h2>
+<p>Bei jeder Konvertierung erstellt das Programm automatisch eine <strong>Log-Datei</strong> mit Zeitstempel (z. B. <code>inat_to_mykis_2026-07-07_14-05-33.log</code>) im Ordner <code>logs/</code>. Sie dient der Qualitätssicherung und zeigt im Detail, wie die Daten gefiltert, umgewandelt und zugeordnet wurden.</p>
+<p>Die Datei enthält:</p>
+<ul>
+<li><strong>Statistiken</strong> zur Referenzdatei (Anzahl Einträge, gefundene <code>mtb</code>-Spalte, Anzahl der 16tel-Quadranten) und zum geladenen Shapefile.</li>
+<li><strong>Einzelzeilen</strong> zu jeder Umwandlung und jedem aussortierten oder fehlerhaften Datensatz.</li>
+</ul>
+<p>Die meisten Einzelzeilen beginnen mit dem Schritt und dem Datensatz-Index <code>[idx]</code>. Der Index bezieht sich auf die iNaturalist-Quelldatei – für die genaue Excel-Zeile gilt: <strong>Excel-Zeile = idx + 2</strong>. Die Pfeile (<code>→</code>) zeigen jeweils <em>alt → neu</em>.</p>
+<h3 class="atx" id="log-eintrage">Log-Einträge</h3>
+<table>
+<thead>
+<tr>
+<th>Eintrag (Beispiel)</th>
+<th>Bedeutung</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>Fundort-Zuordnung:[0] --&gt; … 'BASIS_ortslage: 'iNaturalist' → 'OT …'</code></td>
+<td>Datensatz 0 wurde einem Referenz-Fundort zugeordnet (je Feld alt → neu).</td>
+</tr>
+<tr>
+<td><code>Fundort[12] Fehler: Koordinate (...) liegt nicht in Deutschland (außerhalb der TK25)</code></td>
+<td>Die Koordinaten liegen außerhalb der deutschen TK25-Karte – keine MTB-Zuordnung.</td>
+</tr>
+<tr>
+<td><code>Fundort[7] Fehler: keine gültige Koordinate (...)</code></td>
+<td>Der Datensatz hat keine (gültigen) Koordinaten.</td>
+</tr>
+<tr>
+<td><code>Fundort-Zuordnung:[25] --&gt; Error: Keiner der Referenz 16tel Quadranten [3647,24] hat Geokoordinaten (...)</code></td>
+<td>Der Quadrant ist in der Referenzliste, aber keiner der Einträge dort hat Koordinaten (siehe 4.4).</td>
+</tr>
+<tr>
+<td><code>Warnung: 2 Referenz-Einträge ohne Quadrant werden keinem Fund zugeordnet (z.B. 1626)</code></td>
+<td>Referenzeinträge mit MTB ohne Komma/Quadrant werden ignoriert (siehe 4.4).</td>
+</tr>
+<tr>
+<td><code>Erfassungs-Filter (bereits erfasst) [25]: 288123 / Amanita muscaria</code></td>
+<td>Aussortiert, weil <code>field:mykis-erfassung</code> = Ja/Yes ist.</td>
+</tr>
+<tr>
+<td><code>Standort-Filter (obscured) [7]: 4711 / Boletus edulis</code></td>
+<td>Aussortiert, weil <code>geoprivacy</code> = obscured ist (nur wenn die Option aktiv ist).</td>
+</tr>
+<tr>
+<td><code>Wirt-Konvertierung [3]: 'coleoptera' → 'KÄFER'</code></td>
+<td>Der Wirt-Wert wurde übersetzt bzw. um „ sp." ergänzt.</td>
+</tr>
+<tr>
+<td><code>Namenskonvertierung:[3] user_login 'maxm': 'M, Max' → 'Mustermann, Max'</code></td>
+<td>Der Erfasser wurde über die Namensliste ersetzt.</td>
+</tr>
+<tr>
+<td><code>Qualität[9]: unbekannter Wert '...' wird ignoriert</code></td>
+<td>Im Feld <code>field:mykis-qualität</code> stand ein nicht gelisteter Wert; die Zelle bleibt leer.</td>
+</tr>
+</tbody></table>
+<p><strong>Beispiel (Auszug):</strong></p>
+<pre><code class="fenced-code-block">Info: Referenzdatei geladen: 5808 Spalten
 Info: MTB-Spalte gefunden als 'mtb'
-Lade Shapefile: C:\workspace\INaturlist_Mykis_Konvertierung _github\dist\inaturalist-to-mykis\_internal\assets\b25_utm32s\b25_utm32s.shp
 Shapefile geladen: 2980 MTB-Blätter
 Referenz Datei Einträge: 5808
 Referenz Datei verschiedene 16tel Quadranten: 1778
-Fundort-Zuordnung:[0] --&gt; 1626,342 ' → ' 1626.342', 'BASIS_ortslage: 'iNaturalist' → 'OT Hasseldieksdamm Hofholz', BASIS_ort: 'Kiel' → 'Kiel', name_staat: 'Deutschland' → 'Deutschland', name_provinz: '' → 'Schleswig-Holstein', name_kreis: 'nan' → 'Kiel', hoehenstufe: 'nan' → 'planar (unter 100mNN)', ozeanitaet: 'nan' → 'subozeanisch', zonalitaet: 'nan' → 'temperat'
-Fundort-Zuordnung:[1] --&gt; 1626,432 ' → ' 1626.432', 'BASIS_ortslage: 'iNaturalist' → 'Zentrum Südfriedhof', BASIS_ort: 'Schützenwall/Boiestraße - Kiel' → 'Kiel', name_staat: 'Deutschland' → 'Deutschland', name_provinz: '' → 'Schleswig-Holstein', name_kreis: 'nan' → 'Kiel', hoehenstufe: 'nan' → 'planar (unter 100mNN)', ozeanitaet: 'nan' → 'subozeanisch', zonalitaet: 'nan' → 'temperat'
-Fundort-Zuordnung:[2] --&gt; 1626,431 ' → ' 1626.431', 'BASIS_ortslage: 'iNaturalist' → 'OT Hasseldieksdamm Uhlenkrug-Tierheim', BASIS_ort: 'Kiel' → 'Kiel', name_staat: 'Deutschland' → 'Deutschland', name_provinz: '' → 'Schleswig-Holstein', name_kreis: 'nan' → 'Kiel', hoehenstufe: 'nan' → 'planar (unter 100mNN)', ozeanitaet: 'nan' → 'subozeanisch', zonalitaet: 'nan' → 'temperat'</code></pre>
+Fundort-Zuordnung:[0] --&gt; 1626,342 ' → ' 1626.342', 'BASIS_ortslage: 'iNaturalist' → 'OT Hasseldieksdamm Hofholz', BASIS_ort: 'Kiel' → 'Kiel', name_provinz: '' → 'Schleswig-Holstein', name_kreis: 'nan' → 'Kiel', …</code></pre>
+<h3 class="atx" id="zusatzliche-csv-dateien">Zusätzliche CSV-Dateien</h3>
+<p>Zusätzlich zur <code>.log</code>-Datei erzeugt das Programm – je nach gewählten Listen – strukturierte CSV-Dateien mit demselben Zeitstempel (<code>;</code>-getrennt, direkt in Excel zu öffnen).</p>
+<table>
+<thead>
+<tr>
+<th>Datei</th>
+<th>Wird erstellt</th>
+<th>Inhalt</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>…_changes.csv</code></td>
+<td>mit Fundort-Referenzliste</td>
+<td>Eine Zeile je zugeordnetem Fundort mit allen Feldänderungen (<code>MTB_alt</code>/<code>MTB_neu</code> und je Ortsfeld ein <code>_alt</code>/<code>_neu</code>-Paar).</td>
+</tr>
+<tr>
+<td><code>…_namen.csv</code></td>
+<td>mit Namensliste</td>
+<td>Eine Zeile je ersetztem Erfasser: <code>id</code>, <code>user_id</code>, <code>user_login</code>, <code>user_name</code>, <code>erfasser_alt</code>, <code>erfasser_neu</code>.</td>
+</tr>
+<tr>
+<td><code>…_namen_unique.csv</code></td>
+<td>mit Namensliste</td>
+<td>Wie oben, aber jeder Name nur <strong>einmal</strong>, mit Spalte <code>anzahl</code> (wie oft er vorkam).</td>
+</tr>
+</tbody></table>
 <h2 class="atx" id="6-best-practices">6. Best Practices</h2>
 <h3 class="atx" id="61-vorbereitung-in-inaturalist-expot">6.1 Vorbereitung in iNaturalist Expot</h3>
 <p><a href="https://www.inaturalist.org/observations/export?projects%5B%5D=mykis-kartierung">Beobachtungen exportieren · iNaturalist</a> </p>
@@ -1827,6 +1967,27 @@ Zurzeit werden folgeden Felder in der Konvertierung verwendet:</p>
 </ol>
 <hr>
 <h2 class="atx" id="8-versions-historie">8 Versions-Historie</h2>
+<h3 class="atx" id="v0120-2026-07-01">v0.12.0 (2026-07-01)</h3>
+<ul>
+<li>bugfix: Übersetzung "sus scrofa" : "Wildschwein"</li>
+<li>field:mykis-qualität das Feld gelesen und mit einer Mapping Tabelle umgewandelt (z.b: unsicher --&gt; 1) und auf das Feld Qualität geschrieben</li>
+<li>Wirt Übersetzungen kann man selber anpassen<ul>
+<li>Pfad: inaturalist-to-mykis_internal\assets\wirt_uebersetzungen.csv</li>
+</ul>
+</li>
+<li>Log:<ul>
+<li>Mehr ausgaben in .log</li>
+<li>xxx_changes.csv hinzugefügt --&gt; zeigt Details zur Fundort Zuordnung</li>
+<li>xxx_namen.csv hinzugefügt --&gt; zeigt Details zur Namens Zuordnung</li>
+<li>xxx_name_unique.csv hinzugefügt --&gt; zeigt Details zur Namens Zurodnung</li>
+</ul>
+</li>
+<li>Auf das Mykis -Feld verbleib wird jetzt das iNaturalist Feld: field:mykis-verbleib kopiert</li>
+<li>Auf das Mykis -Feld beleg_nr wird jetzt das iNaturalist Feld: field:mykis-beleg-nr kopiert</li>
+<li>Standort Filter (geoprivacy = obscured) hinzugefügt (Versteckte Fundorte werden nicht konvertiert)</li>
+<li>GUI Option Standort Filter aktivieren/deaktivieren</li>
+<li>Feld Ungenauigkeit Ausgabe von Punkt auf Komma geändert</li>
+</ul>
 <h3 class="atx" id="v0110-2026-05-21">v0.11.0 (2026-05-21)</h3>
 <ul>
 <li>Wirt: Übersetzung taxonomischer Begriffe (z. B. „Angiospermae" → „LAUBHOLZ/LAUBBAUM")</li>

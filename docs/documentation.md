@@ -1,7 +1,7 @@
 # Dokumentation – inaturalist-to-mykis
 
-**Version:** 0.10.0  
-**Datum:** 2026-05-18
+**Version:** 0.12.0  
+**Datum:** 2026-07-07
 
 ---
 
@@ -14,11 +14,10 @@ Funktionen:
 - Konvertierung der Daten
 - Erfassung Filter (field:mykis-erfassung)
 - Standort Filter (geoprivacy = obscured)
-- Koordinaten --> MTB 16tel
+- Koordinaten umwandlung in MTB 16tel
 - Namenszuordnung
-- Referenzfundor Zuordnung
+- Fundort Zuordnung
 - Log Datei
-- 
 
 ### Details zum Dateiformat
 
@@ -427,6 +426,8 @@ Beispiele: `Angiospermae` → `LAUBHOLZ/LAUBBAUM`, `Cervus elaphus` → `Rothirs
 | Bubalus arnee          | Wasserbüffel            |
 | Oryctolagus cuniculus  | Wildkaninchen           |
 
+> **💡 Eigene Wirte ergänzen:** Die Übersetzungstabelle ist eine bearbeitbare Datei – `assets/wirt_uebersetzungen.csv` (in der gepackten App unter `…\_internal\assets\`). Einfach in Excel öffnen, neue Zeilen im Format `iNaturalist-Name;Mykis-Bezeichnung` ergänzen und speichern. Die Änderungen greifen beim nächsten Konvertieren – ohne Code-Anpassung und ohne Neustart. Fehlt die Datei, verwendet das Programm die oben gezeigten Standardwerte.
+
 ###### 4.5 Qualität
 
 Das Feld `field:mykis-qualität` aus dem iNaturalist-Export wird über folgende Tabelle in die Mykis-Qualitäts-ID umgewandelt:
@@ -452,25 +453,24 @@ Bei jeder Konvertierung erstellt das Programm automatisch eine **Log-Datei** mit
 Die Datei enthält:
 
 - **Statistiken** zur Referenzdatei (Anzahl Einträge, gefundene `mtb`-Spalte, Anzahl der 16tel-Quadranten) und zum geladenen Shapefile.
-- **Zusammenfassungen** der Filterschritte (z. B. `📊 Erfassung-Filter: Von 216 Beobachtungen: ✅ 200 werden verarbeitet …`).
 - **Einzelzeilen** zu jeder Umwandlung und jedem aussortierten oder fehlerhaften Datensatz.
 
 Die meisten Einzelzeilen beginnen mit dem Schritt und dem Datensatz-Index `[idx]`. Der Index bezieht sich auf die iNaturalist-Quelldatei – für die genaue Excel-Zeile gilt: **Excel-Zeile = idx + 2**. Die Pfeile (`→`) zeigen jeweils *alt → neu*.
 
 ### Log-Einträge
 
-| Eintrag (Beispiel) | Bedeutung |
-| --- | --- |
-| `Fundort-Zuordnung:[0] --> … 'BASIS_ortslage: 'iNaturalist' → 'OT …'` | Datensatz 0 wurde einem Referenz-Fundort zugeordnet (je Feld alt → neu). |
-| `Fundort[12] Fehler: Koordinate (...) liegt nicht in Deutschland (außerhalb der TK25)` | Die Koordinaten liegen außerhalb der deutschen TK25-Karte – keine MTB-Zuordnung. |
-| `Fundort[7] Fehler: keine gültige Koordinate (...)` | Der Datensatz hat keine (gültigen) Koordinaten. |
+| Eintrag (Beispiel)                                                                                          | Bedeutung                                                                                         |
+| ----------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------- |
+| `Fundort-Zuordnung:[0] --> … 'BASIS_ortslage: 'iNaturalist' → 'OT …'`                                       | Datensatz 0 wurde einem Referenz-Fundort zugeordnet (je Feld alt → neu).                          |
+| `Fundort[12] Fehler: Koordinate (...) liegt nicht in Deutschland (außerhalb der TK25)`                      | Die Koordinaten liegen außerhalb der deutschen TK25-Karte – keine MTB-Zuordnung.                  |
+| `Fundort[7] Fehler: keine gültige Koordinate (...)`                                                         | Der Datensatz hat keine (gültigen) Koordinaten.                                                   |
 | `Fundort-Zuordnung:[25] --> Error: Keiner der Referenz 16tel Quadranten [3647,24] hat Geokoordinaten (...)` | Der Quadrant ist in der Referenzliste, aber keiner der Einträge dort hat Koordinaten (siehe 4.4). |
-| `Warnung: 2 Referenz-Einträge ohne Quadrant werden keinem Fund zugeordnet (z.B. 1626)` | Referenzeinträge mit MTB ohne Komma/Quadrant werden ignoriert (siehe 4.4). |
-| `Erfassungs-Filter (bereits erfasst) [25]: 288123 / Amanita muscaria` | Aussortiert, weil `field:mykis-erfassung` = Ja/Yes ist. |
-| `Standort-Filter (obscured) [7]: 4711 / Boletus edulis` | Aussortiert, weil `geoprivacy` = obscured ist (nur wenn die Option aktiv ist). |
-| `Wirt-Konvertierung [3]: 'coleoptera' → 'KÄFER'` | Der Wirt-Wert wurde übersetzt bzw. um „ sp." ergänzt. |
-| `Namenskonvertierung:[3] user_login 'maxm': 'M, Max' → 'Mustermann, Max'` | Der Erfasser wurde über die Namensliste ersetzt. |
-| `Qualität[9]: unbekannter Wert '...' wird ignoriert` | Im Feld `field:mykis-qualität` stand ein nicht gelisteter Wert; die Zelle bleibt leer. |
+| `Warnung: 2 Referenz-Einträge ohne Quadrant werden keinem Fund zugeordnet (z.B. 1626)`                      | Referenzeinträge mit MTB ohne Komma/Quadrant werden ignoriert (siehe 4.4).                        |
+| `Erfassungs-Filter (bereits erfasst) [25]: 288123 / Amanita muscaria`                                       | Aussortiert, weil `field:mykis-erfassung` = Ja/Yes ist.                                           |
+| `Standort-Filter (obscured) [7]: 4711 / Boletus edulis`                                                     | Aussortiert, weil `geoprivacy` = obscured ist (nur wenn die Option aktiv ist).                    |
+| `Wirt-Konvertierung [3]: 'coleoptera' → 'KÄFER'`                                                            | Der Wirt-Wert wurde übersetzt bzw. um „ sp." ergänzt.                                             |
+| `Namenskonvertierung:[3] user_login 'maxm': 'M, Max' → 'Mustermann, Max'`                                   | Der Erfasser wurde über die Namensliste ersetzt.                                                  |
+| `Qualität[9]: unbekannter Wert '...' wird ignoriert`                                                        | Im Feld `field:mykis-qualität` stand ein nicht gelisteter Wert; die Zelle bleibt leer.            |
 
 **Beispiel (Auszug):**
 
@@ -487,11 +487,11 @@ Fundort-Zuordnung:[0] --> 1626,342 ' → ' 1626.342', 'BASIS_ortslage: 'iNatural
 
 Zusätzlich zur `.log`-Datei erzeugt das Programm – je nach gewählten Listen – strukturierte CSV-Dateien mit demselben Zeitstempel (`;`-getrennt, direkt in Excel zu öffnen).
 
-| Datei | Wird erstellt | Inhalt |
-| --- | --- | --- |
-| `…_changes.csv` | mit Fundort-Referenzliste | Eine Zeile je zugeordnetem Fundort mit allen Feldänderungen (`MTB_alt`/`MTB_neu` und je Ortsfeld ein `_alt`/`_neu`-Paar). |
-| `…_namen.csv` | mit Namensliste | Eine Zeile je ersetztem Erfasser: `id`, `user_id`, `user_login`, `user_name`, `erfasser_alt`, `erfasser_neu`. |
-| `…_namen_unique.csv` | mit Namensliste | Wie oben, aber jeder Name nur **einmal**, mit Spalte `anzahl` (wie oft er vorkam). |
+| Datei                | Wird erstellt             | Inhalt                                                                                                                    |
+| -------------------- | ------------------------- | ------------------------------------------------------------------------------------------------------------------------- |
+| `…_changes.csv`      | mit Fundort-Referenzliste | Eine Zeile je zugeordnetem Fundort mit allen Feldänderungen (`MTB_alt`/`MTB_neu` und je Ortsfeld ein `_alt`/`_neu`-Paar). |
+| `…_namen.csv`        | mit Namensliste           | Eine Zeile je ersetztem Erfasser: `id`, `user_id`, `user_login`, `user_name`, `erfasser_alt`, `erfasser_neu`.             |
+| `…_namen_unique.csv` | mit Namensliste           | Wie oben, aber jeder Name nur **einmal**, mit Spalte `anzahl` (wie oft er vorkam).                                        |
 
 ## 6. Best Practices
 
@@ -547,6 +547,19 @@ Vor jedem Anhängen, ein Backup (Eine Kopie) von der Original Datei machen.
 
 - bugfix: Übersetzung "sus scrofa" : "Wildschwein"
 - field:mykis-qualität das Feld gelesen und mit einer Mapping Tabelle umgewandelt (z.b: unsicher --> 1) und auf das Feld Qualität geschrieben
+- Wirt Übersetzungen kann man selber anpassen
+  - Pfad: inaturalist-to-mykis\_internal\assets\wirt_uebersetzungen.csv
+- Log:
+  - Mehr ausgaben in .log
+  - xxx_changes.csv hinzugefügt --> zeigt Details zur Fundort Zuordnung
+  - xxx_namen.csv hinzugefügt --> zeigt Details zur Namens Zuordnung
+  - xxx_name_unique.csv hinzugefügt --> zeigt Details zur Namens Zurodnung
+- Auf das Mykis -Feld verbleib wird jetzt das iNaturalist Feld: field:mykis-verbleib kopiert
+- Auf das Mykis -Feld beleg_nr wird jetzt das iNaturalist Feld: field:mykis-beleg-nr kopiert
+- Standort Filter (geoprivacy = obscured) hinzugefügt (Versteckte Fundorte werden nicht konvertiert)
+- GUI Option Standort Filter aktivieren/deaktivieren
+- Feld Ungenauigkeit Ausgabe von Punkt auf Komma geändert
+  
 
 ### v0.11.0 (2026-05-21)
 
