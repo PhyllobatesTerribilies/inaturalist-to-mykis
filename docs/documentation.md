@@ -63,6 +63,18 @@ Nach dem ausführen des Programms öffnet sich folgendes Fenster:
 - GELB **Optionen:** Auswahloption,
 - BLAU **Protokoll:** Live-Status und Meldungen
 
+> **Zuletzt verwendete Pfade merken:** Das Programm merkt sich automatisch die
+> Ausgabedatei, die Fundort-Referenzliste, die Namensliste sowie die Optionen und
+> füllt sie beim nächsten Start wieder aus. Die **Eingabedatei** (iNaturalist-Export)
+> wird bewusst *nicht* gemerkt, da sie bei jedem Lauf eine andere ist.
+> 
+> Solange im Ausgabefeld schon eine Datei steht, wird sie durch die Auswahl einer
+> neuen Eingabedatei **nicht überschrieben**. Ein automatischer Vorschlag entsteht
+> nur, wenn das Ausgabefeld leer ist – zum Zurücksetzen das Feld einfach leeren.
+> 
+> Gespeichert wird das in der Datei `settings.json` neben dem Programm; sie kann
+> jederzeit gelöscht werden, um wieder mit leeren Feldern zu starten.
+
 ## 3. Bedienung
 
 ### 3.1 Einfache Konvertierung (Neue Datei)
@@ -543,7 +555,12 @@ Vor jedem Anhängen, ein Backup (Eine Kopie) von der Original Datei machen.
 
 ## 8 Versions-Historie
 
-### v0.12.0 (2026-07-01)
+### v0.13.0 (2026-08-07)
+
+- bugfix bei Name field:mykis-Beleg-Nr. --> darum wurde nicht auf das Feld beleg_nr kopiert
+- Speicher der Datei Files (Ziel-Datei, Fundort-referenz, Namensliste)
+
+### v0.12.0 (2026-07-07)
 
 - bugfix: Übersetzung "sus scrofa" : "Wildschwein"
 - field:mykis-qualität das Feld gelesen und mit einer Mapping Tabelle umgewandelt (z.b: unsicher --> 1) und auf das Feld Qualität geschrieben
@@ -559,7 +576,6 @@ Vor jedem Anhängen, ein Backup (Eine Kopie) von der Original Datei machen.
 - Standort Filter (geoprivacy = obscured) hinzugefügt (Versteckte Fundorte werden nicht konvertiert)
 - GUI Option Standort Filter aktivieren/deaktivieren
 - Feld Ungenauigkeit Ausgabe von Punkt auf Komma geändert
-  
 
 ### v0.11.0 (2026-05-21)
 

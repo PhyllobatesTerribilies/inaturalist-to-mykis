@@ -8,3 +8,4 @@ build/
 medien_docs/
 *.log
 logs/
+settings.json

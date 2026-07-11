@@ -38,6 +38,7 @@ from src.io_validate import (
     save_table,
     validate_inat_columns,
 )
+from src.settings import load_settings, save_settings
 from src.version import __app_name__, __date__, __version__
 
 # ==============================================================================
@@ -99,12 +100,62 @@ class App(tk.Tk):
         self.var_use_login_as_erfasser = tk.BooleanVar(value=False)
         self.var_filter_obscured = tk.BooleanVar(value=False)
 
+        # Zuletzt verwendete Pfade/Optionen laden und Felder vorausfüllen.
+        # Danach jede weitere Änderung automatisch mitschreiben.
+        self._load_saved_settings()
+
         # GUI aufbauen
         self._build_ui()
+        self._install_settings_autosave()
 
         # Willkommensnachricht
         self.log(f"✅ {__app_name__} v{__version__} ({__date__}) bereit.")
         self.log(f"📁 Template: {self.cfg.template_xls}")
+
+    # -------------------------------------------------------------------------
+    # Einstellungen merken (zuletzt gewählte Pfade/Optionen)
+    # -------------------------------------------------------------------------
+
+    def _load_saved_settings(self) -> None:
+        """
+        Füllt die Felder mit den zuletzt verwendeten Werten (falls vorhanden).
+
+        Der iNaturalist-Export bleibt absichtlich leer – er ist bei jedem Lauf
+        ein anderer (siehe src/settings.py).
+        """
+        data = load_settings()
+        if not data:
+            return
+        self.var_output.set(str(data.get("output", "")))
+        self.var_ref.set(str(data.get("ref", "")))
+        self.var_name_ref.set(str(data.get("name_ref", "")))
+        self.var_use_login_as_erfasser.set(
+            bool(data.get("use_login_as_erfasser", False))
+        )
+        self.var_filter_obscured.set(bool(data.get("filter_obscured", False)))
+
+    def _install_settings_autosave(self) -> None:
+        """Speichert die Einstellungen automatisch, sobald sich ein Feld ändert."""
+        for var in (
+            self.var_output,
+            self.var_ref,
+            self.var_name_ref,
+            self.var_use_login_as_erfasser,
+            self.var_filter_obscured,
+        ):
+            var.trace_add("write", lambda *_: self._save_settings())
+
+    def _save_settings(self) -> None:
+        """Schreibt die aktuellen Pfade/Optionen in die Einstellungsdatei."""
+        save_settings(
+            {
+                "output": self.var_output.get().strip(),
+                "ref": self.var_ref.get().strip(),
+                "name_ref": self.var_name_ref.get().strip(),
+                "use_login_as_erfasser": bool(self.var_use_login_as_erfasser.get()),
+                "filter_obscured": bool(self.var_filter_obscured.get()),
+            }
+        )
 
     def _add_file_row(
         self,
@@ -466,9 +517,15 @@ class App(tk.Tk):
             self.var_output.set(p)
 
     def suggest_output(self) -> None:
-        """Schlägt Ausgabedatei basierend auf Eingabe vor."""
+        """
+        Schlägt eine Ausgabedatei anhand der Eingabedatei vor.
+
+        Ein bereits gefülltes Ziel-Feld bleibt unangetastet: ein gemerktes oder
+        von Hand gewähltes Ziel soll durch eine neue Eingabedatei nicht
+        verloren gehen. Wer neu vorschlagen lassen will, leert das Feld (✕).
+        """
         inp = self.var_input.get().strip()
-        if not inp:
+        if not inp or self.var_output.get().strip():
             return
         stem = Path(inp).stem
         self.var_output.set(str(Path(inp).with_name(f"{stem}_mykis.xls")))
@@ -493,7 +550,9 @@ class App(tk.Tk):
         else:
             # Normal-Modus: Button-Text zurücksetzen
             self.output_btn.config(text="Ziel wählen…")
-            # Vorschlag neu generieren
+            # Anhänge-Ziel verwerfen und Vorschlag neu generieren – sonst würde
+            # die zum Anhängen gewählte Datei im Normal-Modus überschrieben.
+            self.var_output.set("")
             self.suggest_output()
 
     # -------------------------------------------------------------------------

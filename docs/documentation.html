@@ -1293,6 +1293,17 @@ Layout: Die verwendete Vorlage für das Programm findet man unter <a href="https
 <li>GELB <strong>Optionen:</strong> Auswahloption,</li>
 <li>BLAU <strong>Protokoll:</strong> Live-Status und Meldungen</li>
 </ul>
+<blockquote>
+<p><strong>Zuletzt verwendete Pfade merken:</strong> Das Programm merkt sich automatisch die
+Ausgabedatei, die Fundort-Referenzliste, die Namensliste sowie die Optionen und
+füllt sie beim nächsten Start wieder aus. Die <strong>Eingabedatei</strong> (iNaturalist-Export)
+wird bewusst <em>nicht</em> gemerkt, da sie bei jedem Lauf eine andere ist.</p>
+<p>Solange im Ausgabefeld schon eine Datei steht, wird sie durch die Auswahl einer
+neuen Eingabedatei <strong>nicht überschrieben</strong>. Ein automatischer Vorschlag entsteht
+nur, wenn das Ausgabefeld leer ist – zum Zurücksetzen das Feld einfach leeren.</p>
+<p>Gespeichert wird das in der Datei <code>settings.json</code> neben dem Programm; sie kann
+jederzeit gelöscht werden, um wieder mit leeren Feldern zu starten.</p>
+</blockquote>
 <h2 class="atx" id="3-bedienung">3. Bedienung</h2>
 <h3 class="atx" id="31-einfache-konvertierung-neue-datei">3.1 Einfache Konvertierung (Neue Datei)</h3>
 <p><strong>Schritt 1:</strong> Eingabedatei wählen</p>
@@ -1967,7 +1978,12 @@ Zurzeit werden folgeden Felder in der Konvertierung verwendet:</p>
 </ol>
 <hr>
 <h2 class="atx" id="8-versions-historie">8 Versions-Historie</h2>
-<h3 class="atx" id="v0120-2026-07-01">v0.12.0 (2026-07-01)</h3>
+<h3 class="atx" id="v0130-2026-08-07">v0.13.0 (2026-08-07)</h3>
+<ul>
+<li>bugfix bei Name field:mykis-Beleg-Nr. --&gt; darum wurde nicht auf das Feld beleg_nr kopiert</li>
+<li>Speicher der Datei Files (Ziel-Datei, Fundort-referenz, Namensliste)</li>
+</ul>
+<h3 class="atx" id="v0120-2026-07-07">v0.12.0 (2026-07-07)</h3>
 <ul>
 <li>bugfix: Übersetzung "sus scrofa" : "Wildschwein"</li>
 <li>field:mykis-qualität das Feld gelesen und mit einer Mapping Tabelle umgewandelt (z.b: unsicher --&gt; 1) und auf das Feld Qualität geschrieben</li>

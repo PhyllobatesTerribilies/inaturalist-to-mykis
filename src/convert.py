@@ -1199,7 +1199,7 @@ def map_custom_fields(
     )
     assign_if_exists(out_df, "Wirt", build_wirt_series(df_in, log_file_func))
     assign_if_exists(out_df, "verbleib", copy_column(df_in, "field:mykis-verbleib"))
-    assign_if_exists(out_df, "beleg_nr", copy_column(df_in, "field:mykis-beleg-nr"))
+    assign_if_exists(out_df, "beleg_nr", copy_column(df_in, "field:mykis-Beleg-Nr."))
 
 
 def build_wirt_series(
