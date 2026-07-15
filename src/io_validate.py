@@ -13,7 +13,7 @@ from __future__ import annotations
 
 import logging
 from pathlib import Path
-from typing import Sequence, Optional, Callable
+from typing import Any, Sequence, Optional, Callable
 
 import pandas as pd
 
@@ -37,7 +37,9 @@ def make_logger(
 # ==============================================================================
 
 
-def read_any_table(path: Path, min_columns: int = 2) -> pd.DataFrame:
+def read_any_table(
+    path: Path, min_columns: int = 2, dtype: Any = None
+) -> pd.DataFrame:
     """
     Liest Tabelle (CSV oder Excel) mit automatischer Format-Erkennung.
 
@@ -54,6 +56,9 @@ def read_any_table(path: Path, min_columns: int = 2) -> pd.DataFrame:
             falsches Trennzeichen liefert oft nur 1 breite Spalte. Für schmale
             Referenzlisten (z.B. 2 Spalten) klein halten, für den breiten
             iNaturalist-Export höher setzen.
+        dtype: An pandas durchgereicht. ``str`` liest alle Spalten als Text –
+            so bleiben IDs/Beleg-Nr. erhalten und werden nicht zu Floats
+            (sonst würde "380337686" zu "380337686.0"). ``None`` = Auto-Typen.
 
     Returns:
         DataFrame mit geladenen Daten
@@ -65,7 +70,7 @@ def read_any_table(path: Path, min_columns: int = 2) -> pd.DataFrame:
     # Versuch 1: Excel (bei .xlsx/.xls Endung)
     if path.suffix.lower() in [".xlsx", ".xls", ".xlsm"]:
         try:
-            return pd.read_excel(path)
+            return pd.read_excel(path, dtype=dtype)
         except Exception:
             pass  # Falls Excel fehlschlägt, versuche als CSV
 
@@ -73,7 +78,9 @@ def read_any_table(path: Path, min_columns: int = 2) -> pd.DataFrame:
     # utf-8-sig entfernt ein evtl. BOM (Excel „CSV UTF-8"), liest aber auch
     # normale utf-8-Dateien – sonst hinge das BOM am ersten Spaltennamen.
     try:
-        df = pd.read_csv(path, sep=None, engine="python", encoding="utf-8-sig")
+        df = pd.read_csv(
+            path, sep=None, engine="python", encoding="utf-8-sig", dtype=dtype
+        )
         if len(df.columns) >= min_columns:
             logging.debug(f"CSV automatisch geladen: {len(df.columns)} Spalten")
             return df
@@ -83,7 +90,9 @@ def read_any_table(path: Path, min_columns: int = 2) -> pd.DataFrame:
     # Versuch 3: CSV mit verschiedenen Trennzeichen
     for sep_name, sep_char in [("Komma", ","), ("Semikolon", ";"), ("Tab", "\t")]:
         try:
-            df = pd.read_csv(path, sep=sep_char, engine="python", encoding="utf-8-sig")
+            df = pd.read_csv(
+                path, sep=sep_char, engine="python", encoding="utf-8-sig", dtype=dtype
+            )
             if len(df.columns) >= min_columns:
                 logging.debug(f"CSV mit {sep_name} geladen: {len(df.columns)} Spalten")
                 return df
@@ -93,7 +102,9 @@ def read_any_table(path: Path, min_columns: int = 2) -> pd.DataFrame:
     # Versuch 4: Andere Encodings
     for encoding in ["latin-1", "cp1252"]:
         try:
-            df = pd.read_csv(path, sep=None, engine="python", encoding=encoding)
+            df = pd.read_csv(
+                path, sep=None, engine="python", encoding=encoding, dtype=dtype
+            )
             if len(df.columns) >= min_columns:
                 logging.debug(f"CSV mit Encoding {encoding} geladen")
                 return df
@@ -102,7 +113,7 @@ def read_any_table(path: Path, min_columns: int = 2) -> pd.DataFrame:
 
     # Versuch 5: Fallback ohne Validierung (letzter Versuch)
     try:
-        df = pd.read_csv(path, engine="python")
+        df = pd.read_csv(path, engine="python", dtype=dtype)
         logging.warning(
             f"CSV mit Fallback geladen: {len(df.columns)} Spalten (möglicherweise falsch!)"
         )

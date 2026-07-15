@@ -634,8 +634,9 @@ class App(tk.Tk):
                 raise FileNotFoundError(f"Datei nicht gefunden: {inp}")
 
             # Breiter iNaturalist-Export → hoher Schwellwert für die
-            # Trennzeichen-Erkennung.
-            df = read_any_table(inp, min_columns=10)
+            # Trennzeichen-Erkennung. dtype=str: alles als Text lesen, damit
+            # IDs/Beleg-Nr. exakt kopiert werden (kein "380337686.0").
+            df = read_any_table(inp, min_columns=10, dtype=str)
             self.log(inspect_table_header(df))
 
             # -----------------------------------------------------------------

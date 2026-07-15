@@ -116,6 +116,22 @@ def load_wirt_uebersetzungen() -> dict[str, str]:
     return mapping or dict(_WIRT_UEBERSETZUNGEN_DEFAULT)
 
 
+def resolve_column(df: pd.DataFrame, column: str) -> str | None:
+    """
+    Findet den echten Spaltennamen unabhängig von Groß-/Kleinschreibung.
+
+    Exakter Treffer wird bevorzugt (schnell und eindeutig); erst danach wird
+    case-insensitiv (getrimmt) gesucht. Gibt None zurück, wenn keine Spalte passt.
+    """
+    if column in df.columns:
+        return column
+    target = column.lower().strip()
+    for c in df.columns:
+        if str(c).lower().strip() == target:
+            return c
+    return None
+
+
 def copy_column(
     df: pd.DataFrame, column: str, default: str = "", raise_on_missing: bool = False
 ) -> pd.Series:
@@ -124,14 +140,15 @@ def copy_column(
 
     Args:
         df: Quell-DataFrame
-        column: Spaltenname
+        column: Spaltenname (Groß-/Kleinschreibung egal)
         default: Wert für leere Zellen
         raise_on_missing: Bei True → Fehler wenn Spalte fehlt
 
     Returns:
         Bereinigte Serie (stripped, ohne NaN)
     """
-    if column not in df.columns:
+    actual = resolve_column(df, column)
+    if actual is None:
         if raise_on_missing:
             raise KeyError(f"Spalte '{column}' nicht gefunden")
         logging.debug(
@@ -139,17 +156,18 @@ def copy_column(
         )
         return pd.Series(default, index=df.index, dtype=str)
 
-    return df[column].fillna(default).astype(str).str.strip().replace("", default)
+    return df[actual].fillna(default).astype(str).str.strip().replace("", default)
 
 
 def copy_numeric_column(df: pd.DataFrame, column: str) -> pd.Series:
-    """Kopiert numerische Spalte (z.B. Koordinaten)."""
-    if column not in df.columns:
+    """Kopiert numerische Spalte (z.B. Koordinaten). Spaltenname case-insensitiv."""
+    actual = resolve_column(df, column)
+    if actual is None:
         logging.debug(
             "Optionale Spalte '%s' nicht vorhanden – Default wird verwendet", column
         )
         return pd.Series(None, index=df.index, dtype=float)
-    return pd.to_numeric(df[column], errors="coerce")
+    return pd.to_numeric(df[actual], errors="coerce")
 
 
 def build_name_lookup(name_ref_df: pd.DataFrame) -> dict[str, str]:
@@ -247,7 +265,8 @@ def extract_basis_ort(df: pd.DataFrame) -> pd.Series:
     - "Berlin, Brandenburg, Deutschland" → "Berlin"
     - "Meilwald, Erlangen, Bayern, DE" → "Erlangen"
     """
-    if "place_guess" not in df.columns:
+    place_col = resolve_column(df, "place_guess")
+    if place_col is None:
         return pd.Series("", index=df.index, dtype=str)
 
     def extract_ort(value: Any) -> str:
@@ -258,7 +277,7 @@ def extract_basis_ort(df: pd.DataFrame) -> pd.Series:
             return ""
         return parts[0] if len(parts) <= 3 else parts[1]
 
-    return df["place_guess"].apply(extract_ort)
+    return df[place_col].apply(extract_ort)
 
 
 def extract_from_place_guess(
@@ -276,7 +295,8 @@ def extract_from_place_guess(
         position=-1, minimum_parts=2: Nur bei 2+ Teilen → letzter Teil
         position=0, minimum_parts=4: Nur bei 4+ Teilen → erster Teil
     """
-    if "place_guess" not in df.columns:
+    place_col = resolve_column(df, "place_guess")
+    if place_col is None:
         return pd.Series("", index=df.index, dtype=str)
 
     def extract_part(value: Any) -> str:
@@ -290,7 +310,7 @@ def extract_from_place_guess(
         except IndexError:
             return ""
 
-    return df["place_guess"].apply(extract_part)
+    return df[place_col].apply(extract_part)
 
 
 def extract_location_with_fallback(
@@ -471,11 +491,12 @@ def filter_by_erfassung(
         log(msg)
         log_file(msg)
 
-    if erfassung_column not in df_in.columns:
+    erfassung_col = resolve_column(df_in, erfassung_column)
+    if erfassung_col is None:
         summary("⚠️  Erfassung-Spalte nicht gefunden - keine Filterung")
         return df_in.copy()
 
-    series = df_in[erfassung_column].fillna("").astype(str).str.strip().str.lower()
+    series = df_in[erfassung_col].fillna("").astype(str).str.strip().str.lower()
     is_erfasst = series.isin(["ja", "yes"])
     removed_count = int(is_erfasst.sum())
     kept_count = len(df_in) - removed_count
@@ -488,10 +509,11 @@ def filter_by_erfassung(
     summary(f"   ⏭️  {removed_count} bereits erfasst (Ja) → übersprungen")
 
     # Jede übersprungene Zeile einzeln – nur in die Log-Datei, nicht ins GUI.
+    id_col = resolve_column(df_in, "id")
     for idx in df_in.index[is_erfasst]:
         teile = []
-        if "id" in df_in.columns:
-            obs_id = df_in.at[idx, "id"]
+        if id_col is not None:
+            obs_id = df_in.at[idx, id_col]
             if pd.notna(obs_id) and str(obs_id).strip():
                 teile.append(str(obs_id))
         taxon = extract_taxon(df_in.loc[idx])
@@ -533,11 +555,12 @@ def filter_by_geoprivacy(
         log(msg)
         log_file(msg)
 
-    if geoprivacy_column not in df_in.columns:
+    geoprivacy_col = resolve_column(df_in, geoprivacy_column)
+    if geoprivacy_col is None:
         summary("⚠️  Spalte 'geoprivacy' nicht gefunden – kein Standort-Filter")
         return df_in.copy()
 
-    series = df_in[geoprivacy_column].fillna("").astype(str).str.strip().str.lower()
+    series = df_in[geoprivacy_col].fillna("").astype(str).str.strip().str.lower()
     is_obscured = series == "obscured"
     removed_count = int(is_obscured.sum())
     kept_count = len(df_in) - removed_count
@@ -550,10 +573,11 @@ def filter_by_geoprivacy(
     summary(f"   ⏭️  {removed_count} mit unscharfem Standort (obscured) → übersprungen")
 
     # Jede übersprungene Zeile einzeln – nur in die Log-Datei, nicht ins GUI.
+    id_col = resolve_column(df_in, "id")
     for idx in df_in.index[is_obscured]:
         teile = []
-        if "id" in df_in.columns:
-            obs_id = df_in.at[idx, "id"]
+        if id_col is not None:
+            obs_id = df_in.at[idx, id_col]
             if pd.notna(obs_id) and str(obs_id).strip():
                 teile.append(str(obs_id))
         taxon = extract_taxon(df_in.loc[idx])
@@ -1213,16 +1237,23 @@ def build_wirt_series(
     eine Zeile (alt → neu) für die Log-Datei.
     """
     uebersetzungen = load_wirt_uebersetzungen()
+    # Ziel-/Ausgabewerte der Übersetzung (z.B. "laubholz/laubbaum") – ein Wert,
+    # der schon in dieser Form ankommt, ist bereits übersetzt und darf kein
+    # " sp." bekommen (auch wenn er wie eine einzelne Gattung aussieht).
+    translated_values = {v.strip().lower() for v in uebersetzungen.values()}
     original = copy_column(df_in, "field:mykis-substrat/-wirt").str.strip()
     wirt_lower = original.str.lower()
     was_translated = wirt_lower.isin(uebersetzungen)
     wirt_col = original.where(~was_translated, wirt_lower.map(uebersetzungen))
-    # Einzelnes Wort (Gattung ohne Art) → " sp." anhängen
+    # Einzelnes Wort (Gattung ohne Art) → " sp." anhängen.
+    # Ausgenommen: gerade übersetzte Werte und Werte, die bereits in Ziel-Form
+    # vorliegen (z.B. iNaturalist liefert direkt "LAUBHOLZ/LAUBBAUM").
     is_genus = (
         wirt_col.notna()
         & (wirt_col != "")
         & ~wirt_col.str.contains(" ")
         & ~was_translated
+        & ~wirt_col.str.strip().str.lower().isin(translated_values)
     )
     result = wirt_col.where(~is_genus, wirt_col + " sp.")
 

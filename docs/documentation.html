@@ -1249,7 +1249,7 @@ pre[class*="language-"] {
 </head>
 <body>
   <article class="markdown-body"><h1 class="atx" id="dokumentation--inaturalist-to-mykis">Dokumentation – inaturalist-to-mykis</h1>
-<p><strong>Version:</strong> 0.12.0<br><strong>Datum:</strong> 2026-07-07</p>
+<p><strong>Version:</strong> 0.14.0<br><strong>Datum:</strong> 2026-07-15</p>
 <hr>
 <h2 class="atx" id="1-einleitung">1. Einleitung</h2>
 <p>Das Programm inaturalist-to-mykis konvertiert Pilzbeobachtungen von iNaturalist in ein Format, das direkt in MykIS importiert werden kann. Dabei werden vordefinierte Spalten einer exportierten iNaturalist-Datei in das kompatible MykIS-Dateiformat überführt.</p>
@@ -1978,7 +1978,12 @@ Zurzeit werden folgeden Felder in der Konvertierung verwendet:</p>
 </ol>
 <hr>
 <h2 class="atx" id="8-versions-historie">8 Versions-Historie</h2>
-<h3 class="atx" id="v0130-2026-08-07">v0.13.0 (2026-08-07)</h3>
+<h3 class="atx" id="v0140-2026-07-15">v0.14.0 (2026-07-15)</h3>
+<ul>
+<li>bugfix iNaturalist Spaltennamen nur mit korrekter Groß-&amp;Kleinschreibung wurde der das Feld konvertiert, umgeändert so dass Groß &amp; Kleinschreibung nicht beachtet wird.</li>
+<li>Bugfix bei bereits übersetzten Wirt z.b LAUBHOLZ/LAUBBAUM wurde in LAUBHOLZ/LAUBBAUM sp. konvertiert</li>
+</ul>
+<h3 class="atx" id="v0130-2026-07-08">v0.13.0 (2026-07-08)</h3>
 <ul>
 <li>bugfix bei Name field:mykis-Beleg-Nr. --&gt; darum wurde nicht auf das Feld beleg_nr kopiert</li>
 <li>Speicher der Datei Files (Ziel-Datei, Fundort-referenz, Namensliste)</li>

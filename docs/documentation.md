@@ -1,7 +1,7 @@
 # Dokumentation – inaturalist-to-mykis
 
-**Version:** 0.12.0  
-**Datum:** 2026-07-07
+**Version:** 0.14.0  
+**Datum:** 2026-07-15
 
 ---
 
@@ -555,7 +555,12 @@ Vor jedem Anhängen, ein Backup (Eine Kopie) von der Original Datei machen.
 
 ## 8 Versions-Historie
 
-### v0.13.0 (2026-08-07)
+### v0.14.0 (2026-07-15)
+
+- bugfix iNaturalist Spaltennamen nur mit korrekter Groß-&Kleinschreibung wurde der das Feld konvertiert, umgeändert so dass Groß & Kleinschreibung nicht beachtet wird.
+- Bugfix bei bereits übersetzten Wirt z.b LAUBHOLZ/LAUBBAUM wurde in LAUBHOLZ/LAUBBAUM sp. konvertiert
+
+### v0.13.0 (2026-07-08)
 
 - bugfix bei Name field:mykis-Beleg-Nr. --> darum wurde nicht auf das Feld beleg_nr kopiert
 - Speicher der Datei Files (Ziel-Datei, Fundort-referenz, Namensliste)
